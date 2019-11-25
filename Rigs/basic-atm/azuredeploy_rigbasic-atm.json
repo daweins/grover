@@ -2,11 +2,39 @@
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
+        "adminPassword": {
+            "type": "securestring"
+        }
     },
     "variables": {
     },
     "resources": [
-       
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2018-05-01",
+            "name": "linkedTemplate",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "https://raw.githubusercontent.com/daweins/grover/master/Rigs/basic/azuredeploy_rigbasic.json",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "westus2"
+                    },
+                    "adminUsername": {
+                        "value": "msadmin"
+                    },
+                    "adminPassword": {
+                        "value": "[parameters('adminPassword')]"
+                    }
+
+
+                }
+            }
+        }
+
     ],
     "outputs": {
     },
