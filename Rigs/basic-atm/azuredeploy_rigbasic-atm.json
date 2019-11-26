@@ -23,14 +23,41 @@
                     "location": {
                         "value": "westus2"
                     },
+                    "projectName": {
+                        "value": "left-rig-atm"
+                    },
                     "adminUsername": {
                         "value": "msadmin"
                     },
                     "adminPassword": {
                         "value": "[parameters('adminPassword')]"
                     }
-
-
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2018-05-01",
+            "name": "linkedTemplate",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "https://raw.githubusercontent.com/daweins/grover/master/Rigs/basic/azuredeploy_rigbasic.json",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "location": {
+                        "value": "eastus2"
+                    },
+                    "projectName": {
+                        "value": "right-rig-atm"
+                    },
+                    "adminUsername": {
+                        "value": "msadmin"
+                    },
+                    "adminPassword": {
+                        "value": "[parameters('adminPassword')]"
+                    }
                 }
             }
         }
