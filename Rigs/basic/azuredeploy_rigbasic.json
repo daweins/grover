@@ -152,7 +152,7 @@
               "sourceAddressPrefix": "Internet",
               "destinationAddressPrefix": "*",
               "access": "Allow",
-              "priority": 100,
+              "priority": 500,
               "direction": "Inbound"
             }
           },
