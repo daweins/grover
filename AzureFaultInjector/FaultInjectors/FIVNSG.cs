@@ -11,7 +11,8 @@ namespace AzureFaultInjector
     class FINSG : FI
     {
 
-        static string myNewRuleName = "FuzzerBlockingRule";
+        static string myNewRuleNameIn = "FuzzerBlockingRuleIn";
+        static string myNewRuleNameOut = "FuzzerBlockingRuleOut";
         static int myNewRulePriority = 100;
 
 
@@ -29,10 +30,11 @@ namespace AzureFaultInjector
 
             try
             {
-                log.LogInformation($"Removing new highest priority blocking rule to NSG {curNSG.Name}");
+                log.LogInformation($"Removing new highest priority blocking rule to NSG {curNSG.Name}: In & Out");
 
 
-                curNSG.Update().WithoutRule(myNewRuleName).Apply();
+                curNSG.Update().WithoutRule(myNewRuleNameIn).Apply();
+                curNSG.Update().WithoutRule(myNewRuleNameOut).Apply();
                 return true;
             }
             catch (Exception err)
@@ -50,9 +52,21 @@ namespace AzureFaultInjector
             try
             {
                 // Add a blocking rule
-                log.LogInformation($"Adding new highest priority blocking rule to NSG {curNSG.Name}");
-                curNSG.Update().DefineRule(myNewRuleName)
+                log.LogInformation($"Adding new highest priority blocking rule to NSG {curNSG.Name}: Inbound");
+                curNSG.Update().DefineRule(myNewRuleNameIn)
                     .DenyInbound()
+                    .FromAnyAddress()
+                    .FromAnyPort()
+                    .ToAnyAddress()
+                    .ToAnyPort()
+                    .WithAnyProtocol()
+                    .WithDescription("Temporary stop everything rule from Azure Fuzzer to simulate a cut network")
+                    .WithPriority(100)
+                    .Attach()
+                    .Apply();
+                log.LogInformation($"Adding new highest priority blocking rule to NSG {curNSG.Name}: Outbound");
+                curNSG.Update().DefineRule(myNewRuleNameOut)
+                    .DenyOutbound()
                     .FromAnyAddress()
                     .FromAnyPort()
                     .ToAnyAddress()
