@@ -24,7 +24,7 @@
                         "value": "westus2"
                     },
                     "projectName": {
-                        "value": "left-rig-atm"
+                        "value": "left"
                     },
                     "adminUsername": {
                         "value": "msadmin"
@@ -50,7 +50,7 @@
                         "value": "eastus2"
                     },
                     "projectName": {
-                        "value": "right-rig-atm"
+                        "value": "right"
                     },
                     "adminUsername": {
                         "value": "msadmin"
