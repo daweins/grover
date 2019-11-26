@@ -326,7 +326,7 @@
   ],
   "outputs": {
     "slbIP": {
-      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses',variables('lbPublicIpAddressName'))).properties.ipAddress]",
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses',variables('lbPublicIpAddressName'))).ipAddress]",
       "type": "string"
     }
   }
