@@ -324,8 +324,10 @@
       }
     }
   ],
-  "outputs" :{
-    "slbIP" : "[reference(resourceId('Microsoft.Network/publicIPAddresses',variables('lbPublicIpAddressName'))).properties.ipAddress]",
-    "type":"string"
+  "outputs": {
+    "slbIP": {
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses',variables('lbPublicIpAddressName'))).properties.ipAddress]",
+      "type": "string"
+    }
   }
 }
