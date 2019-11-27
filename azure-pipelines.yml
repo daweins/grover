@@ -7,51 +7,54 @@ trigger:
   batch: true
   branches: 
     include:
-    - master
+    - master-availabilityhelper
 
 pool:
   vmImage: 'ubuntu-latest'
 
-
 jobs:
-- job: setup
+- job: DeployFI
   steps:
-  - bash: echo "Setup"
+  - bash: echo "Starting"
 
-- job: B
-  dependsOn: setup
-  condition: succeeded('setup')
-  steps:
-  - bash: echo "Deploying Rig Basic"
   - task: AzureResourceManagerTemplateDeployment@3
     inputs:
       deploymentScope: 'Resource Group'
       ConnectedServiceName: 'daweins''s Azure(82e247ea-1d53-46d8-8ea4-374aa9dd4ae5)'
       subscriptionName: '82e247ea-1d53-46d8-8ea4-374aa9dd4ae5'
       action: 'Create Or Update Resource Group'
-      resourceGroupName: 'lifelimb-rig-basic'
+      resourceGroupName: 'lifelimb-infr'
       location: 'Central US'
       templateLocation: 'URL of the file'
-      csmFileLink: 'https://raw.githubusercontent.com/daweins/grover/master/Rigs/basic/azuredeploy_rigbasic.json'    
-      overrideParameters: -adminPassword "$(adminPassword)"
-
-
-- job: C
-  dependsOn: setup
-  condition: succeeded('setup')
-  steps:
-  - bash: echo "Deploying Rig Basic w/ Azure Traffic Manager"
-  - task: AzureResourceManagerTemplateDeployment@3
-    inputs:
-      deploymentScope: 'Resource Group'
-      ConnectedServiceName: 'daweins''s Azure(82e247ea-1d53-46d8-8ea4-374aa9dd4ae5)'
-      subscriptionName: '82e247ea-1d53-46d8-8ea4-374aa9dd4ae5'
-      action: 'Create Or Update Resource Group'
-      resourceGroupName: 'lifelimb-rig-basicatm'
-      location: 'Central US'
-      templateLocation: 'URL of the file'
-      csmFileLink: 'https://raw.githubusercontent.com/daweins/grover/master/Rigs/basic-atm/azuredeploy_rigbasic-atm.json'
+      csmFileLink: 'https://raw.githubusercontent.com/daweins/grover/master-faultinjector/azuredeploy-FI.json'
       deploymentMode: 'Incremental'
-      overrideParameters: -adminPassword "$(adminPassword)"
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'restore'
+      projects: '**/*.csproj'
+      feedsToUse: 'select'
+
+  - task: DotNetCoreCLI@2
+    displayName: Build
+    inputs:
+      command: build
+      projects: '**/*.csproj'
+      arguments: '--configuration Release' # Update this to match your need
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'publish'
+      publishWebProjects: false
+      projects: '**/*.csproj'
+      arguments: '--no-restore --configuration Release --output $(Build.ArtifactStagingDirectory)'
     
-  
+  - task: AzureFunctionApp@1
+    inputs:
+      azureSubscription: 'daweins''s Azure(82e247ea-1d53-46d8-8ea4-374aa9dd4ae5)'
+      appType: 'functionApp'
+      appName: 'daweinsgroveravhelp'
+      package: '$(Build.ArtifactStagingDirectory)/**/*.zip'
+      deploymentMethod: 'auto'
+      appSettings: '-FUNCTIONS_EXTENSION_VERSION "~2" -targetSubscriptionID "82e247ea-1d53-46d8-8ea4-374aa9dd4ae5" -targetRG "lifelimb-rig-basic" -clientId "0985e12e-5b86-4eee-b988-40e7cd67f776" -clientPassword "$(clientPassword)" -tenantId "72f988bf-86f1-41af-91ab-2d7cd011db47" -ingestConn "$(ingestConn)" -slbName "rigbasic-lb" -targetIPList "10.0.1.4;10.0.1.5;10.0.1.6"'
+    
