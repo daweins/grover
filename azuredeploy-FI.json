@@ -119,14 +119,14 @@
     {
       "type": "Microsoft.Web/sites",
       "apiVersion": "2018-11-01",
-      "name": "[parameters('name')]",
-      "location": "[parameters('location')]",
+      "name": "[parameters('sites_daweinsgroverfi_name')]",
+      "location": "Central US",
       "dependsOn": [
         "[concat('Microsoft.Web/serverfarms/', parameters('serverfarms_ASP_name'))]"
       ],
       "kind": "functionapp",
       "properties": {
-        "name": "[parameters('name')]",
+        "name": "[parameters('sites_daweinsgroverfi_name')]",
         "siteConfig": {
           "appSettings": [
             {
@@ -139,19 +139,19 @@
             },
             {
               "name": "AzureWebJobsStorage",
-              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',parameters('storageAccountName'),';AccountKey=',listKeys(resourceId('82e247ea-1d53-46d8-8ea4-374aa9dd4ae5','lifelimb-infr','Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2019-06-01').keys[0].value,';EndpointSuffix=','core.windows.net')]"
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',parameters('storageAccounts_stordaweinsgrover_name'),';AccountKey=',listKeys(resourceId(subscription().id,'lifelimb-infr','Microsoft.Storage/storageAccounts', parameters('storageAccounts_stordaweinsgrover_name')), '2019-06-01').keys[0].value,';EndpointSuffix=','core.windows.net')]"
             },
             {
               "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
-              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',parameters('storageAccountName'),';AccountKey=',listKeys(resourceId('82e247ea-1d53-46d8-8ea4-374aa9dd4ae5','lifelimb-infr','Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2019-06-01').keys[0].value,';EndpointSuffix=','core.windows.net')]"
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',parameters('storageAccounts_stordaweinsgrover_name'),';AccountKey=',listKeys(resourceId(subscription().id,'lifelimb-infr','Microsoft.Storage/storageAccounts', parameters('storageAccounts_stordaweinsgrover_name')), '2019-06-01').keys[0].value,';EndpointSuffix=','core.windows.net')]"
             },
             {
               "name": "WEBSITE_CONTENTSHARE",
-              "value": "[concat(toLower(parameters('name')), '8cfc')]"
+              "value": "[concat(toLower(parameters('sites_daweinsgroverfi_name')), '8cfc')]"
             }
           ]
         },
-        "serverFarmId": "[concat('/subscriptions/', parameters('subscriptionId'),'/resourcegroups/', parameters('serverFarmResourceGroup'), '/providers/Microsoft.Web/serverfarms/', parameters('serverfarms_ASP_name'))]",
+        "serverFarmId": "[concat('/subscriptions/', subscription().id ,'/resourcegroups/', resourceGroup().id, '/providers/Microsoft.Web/serverfarms/', parameters('serverfarms_ASP_name'))]",
         "hostingEnvironment": "[parameters('hostingEnvironment')]",
         "clientAffinityEnabled": true
       }
