@@ -249,22 +249,6 @@
       }
     },
     {
-      "type": "Microsoft.Web/sites/functions",
-      "apiVersion": "2018-11-01",
-      "name": "[concat(parameters('sites_daweinsgroverfi_name'), '/AzureFaultInjector')]",
-      "location": "Central US",
-      "dependsOn": [
-        "[resourceId('Microsoft.Web/sites', parameters('sites_daweinsgroverfi_name'))]"
-      ],
-      "properties": {
-        "script_root_path_href": "https://daweinsgroverfi.azurewebsites.net/admin/vfs/site/wwwroot/AzureFaultInjector/",
-        "script_href": "https://daweinsgroverfi.azurewebsites.net/admin/vfs/site/wwwroot/bin/AzureFaultInjector.dll",
-        "config_href": "https://daweinsgroverfi.azurewebsites.net/admin/vfs/site/wwwroot/AzureFaultInjector/function.json",
-        "href": "https://daweinsgroverfi.azurewebsites.net/admin/functions/AzureFaultInjector",
-        "config": {}
-      }
-    },
-    {
       "type": "Microsoft.Web/sites/hostNameBindings",
       "apiVersion": "2018-11-01",
       "name": "[concat(parameters('sites_daweinsgroverfi_name'), '/', parameters('sites_daweinsgroverfi_name'), '.azurewebsites.net')]",
