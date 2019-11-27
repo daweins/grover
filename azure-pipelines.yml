@@ -16,18 +16,27 @@ jobs:
 - job: DeployFI
   steps:
   - bash: echo "Starting"
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'restore'
+      projects: '**/*.csproj'
+      feedsToUse: 'select'
+
   - task: DotNetCoreCLI@2
     displayName: Build
     inputs:
       command: build
       projects: '**/*.csproj'
       arguments: '--configuration Release' # Update this to match your need
+
   - task: DotNetCoreCLI@2
     inputs:
-      command: publish
-      arguments: '--configuration Release --output $(Build.ArtifactStagingDirectory)'
-      zipAfterPublish: True
-  
+      command: 'publish'
+      publishWebProjects: false
+      projects: '**/*.csproj'
+      arguments: '--no-restore --configuration Release --output $(Build.ArtifactStagingDirectory)'
+    
   - task: AzureFunctionApp@1
     inputs:
       azureSubscription: 'daweins''s Azure(82e247ea-1d53-46d8-8ea4-374aa9dd4ae5)'
