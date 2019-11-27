@@ -28,9 +28,8 @@ jobs:
       action: 'Create Or Update Resource Group'
       resourceGroupName: 'lifelimb-rig-basic'
       location: 'Central US'
-      templateLocation: 'Linked artifact'
-      csmFile: "azuredeploy_rigbasic.json"
-      deploymentMode: 'Incremental'
+      templateLocation: 'URL of the file'
+      csmFileLink: 'https://raw.githubusercontent.com/daweins/grover/master/Rigs/basic/azuredeploy_rigbasic.json'    
       overrideParameters: -adminPassword "$(adminPassword)"
 
 
