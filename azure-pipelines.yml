@@ -1,0 +1,57 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+  batch: true
+  branches: 
+    include:
+    - master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+
+jobs:
+- job: setup
+  steps:
+  - bash: echo "Setup"
+
+- job: B
+  dependsOn: setup
+  condition: succeeded('setup')
+  steps:
+  - bash: echo "Deploying Rig Basic"
+  - task: AzureResourceManagerTemplateDeployment@3
+    inputs:
+      deploymentScope: 'Resource Group'
+      ConnectedServiceName: 'daweins''s Azure(82e247ea-1d53-46d8-8ea4-374aa9dd4ae5)'
+      subscriptionName: '82e247ea-1d53-46d8-8ea4-374aa9dd4ae5'
+      action: 'Create Or Update Resource Group'
+      resourceGroupName: 'lifelimb-rig-basic'
+      location: 'Central US'
+      templateLocation: 'URL of the file'
+      csmFileLink: 'https://raw.githubusercontent.com/daweins/grover/master/Rigs/basic/azuredeploy_rigbasic.json'    
+      overrideParameters: -adminPassword "$(adminPassword)"
+
+
+- job: C
+  dependsOn: setup
+  condition: succeeded('setup')
+  steps:
+  - bash: echo "Deploying Rig Basic w/ Azure Traffic Manager"
+  - task: AzureResourceManagerTemplateDeployment@3
+    inputs:
+      deploymentScope: 'Resource Group'
+      ConnectedServiceName: 'daweins''s Azure(82e247ea-1d53-46d8-8ea4-374aa9dd4ae5)'
+      subscriptionName: '82e247ea-1d53-46d8-8ea4-374aa9dd4ae5'
+      action: 'Create Or Update Resource Group'
+      resourceGroupName: 'lifelimb-rig-basicatm'
+      location: 'Central US'
+      templateLocation: 'URL of the file'
+      csmFileLink: 'https://raw.githubusercontent.com/daweins/grover/master/Rigs/basic-atm/azuredeploy_rigbasic-atm.json'
+      deploymentMode: 'Incremental'
+      overrideParameters: -adminPassword "$(adminPassword)"
+    
+  
