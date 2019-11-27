@@ -12,9 +12,8 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 
-
 jobs:
-- job: setup
+- job: DeployFI
   steps:
   - bash: echo "Starting"
   - task: AzureFunctionApp@1
