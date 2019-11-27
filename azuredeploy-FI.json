@@ -93,175 +93,6 @@
       }
     },
     {
-      "type": "Microsoft.Web/sites",
-      "apiVersion": "2018-11-01",
-      "name": "[parameters('sites_daweinsgroverfi_name')]",
-      "location": "Central US",
-      "dependsOn": [
-        "[resourceId('Microsoft.Web/serverfarms', parameters('serverfarms_ASP_name'))]"
-      ],
-      "kind": "functionapp",
-      "properties": {
-        "enabled": true,
-        "hostNameSslStates": [
-          {
-            "name": "[concat(parameters('sites_daweinsgroverfi_name'), '.azurewebsites.net')]",
-            "sslState": "Disabled",
-            "hostType": "Standard"
-          },
-          {
-            "name": "[concat(parameters('sites_daweinsgroverfi_name'), '.scm.azurewebsites.net')]",
-            "sslState": "Disabled",
-            "hostType": "Repository"
-          }
-        ],
-        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('serverfarms_ASP_name'))]",
-        "reserved": false,
-        "isXenon": false,
-        "hyperV": false,
-        "scmSiteAlsoStopped": false,
-        "clientAffinityEnabled": true,
-        "clientCertEnabled": false,
-        "hostNamesDisabled": false,
-        "containerSize": 1536,
-        "dailyMemoryTimeQuota": 0,
-        "httpsOnly": false,
-        "redundancyMode": "None"
-      }
-    },
-    {
-      "type": "Microsoft.Web/sites/config",
-      "apiVersion": "2018-11-01",
-      "name": "[concat(parameters('sites_daweinsgroverfi_name'), '/web')]",
-      "location": "Central US",
-      "dependsOn": [
-        "[resourceId('Microsoft.Web/sites', parameters('sites_daweinsgroverfi_name'))]"
-      ],
-      "properties": {
-        "numberOfWorkers": 1,
-        "defaultDocuments": [
-          "Default.htm",
-          "Default.html",
-          "Default.asp",
-          "index.htm",
-          "index.html",
-          "iisstart.htm",
-          "default.aspx",
-          "index.php"
-        ],
-        "netFrameworkVersion": "v4.0",
-        "phpVersion": "5.6",
-        "pythonVersion": "",
-        "nodeVersion": "",
-        "linuxFxVersion": "",
-        "requestTracingEnabled": false,
-        "remoteDebuggingEnabled": false,
-        "remoteDebuggingVersion": "VS2019",
-        "httpLoggingEnabled": false,
-        "logsDirectorySizeLimit": 35,
-        "detailedErrorLoggingEnabled": false,
-        "publishingUsername": "$daweinsgroverfi",
-        "scmType": "VSTSRM",
-        "use32BitWorkerProcess": true,
-        "webSocketsEnabled": false,
-        "alwaysOn": false,
-        "appCommandLine": "",
-        "managedPipelineMode": "Integrated",
-        "virtualApplications": [
-          {
-            "virtualPath": "/",
-            "physicalPath": "site\\wwwroot",
-            "preloadEnabled": false,
-            "virtualDirectories": null
-          }
-        ],
-        "winAuthAdminState": 0,
-        "winAuthTenantState": 0,
-        "customAppPoolIdentityAdminState": false,
-        "customAppPoolIdentityTenantState": false,
-        "loadBalancing": "LeastRequests",
-        "routingRules": [],
-        "experiments": {
-          "rampUpRules": []
-        },
-        "autoHealEnabled": false,
-        "vnetName": "",
-        "siteAuthEnabled": false,
-        "siteAuthSettings": {
-          "enabled": null,
-          "unauthenticatedClientAction": null,
-          "tokenStoreEnabled": null,
-          "allowedExternalRedirectUrls": null,
-          "defaultProvider": null,
-          "clientId": null,
-          "clientSecret": null,
-          "clientSecretCertificateThumbprint": null,
-          "issuer": null,
-          "allowedAudiences": null,
-          "additionalLoginParams": null,
-          "isAadAutoProvisioned": false,
-          "googleClientId": null,
-          "googleClientSecret": null,
-          "googleOAuthScopes": null,
-          "facebookAppId": null,
-          "facebookAppSecret": null,
-          "facebookOAuthScopes": null,
-          "twitterConsumerKey": null,
-          "twitterConsumerSecret": null,
-          "microsoftAccountClientId": null,
-          "microsoftAccountClientSecret": null,
-          "microsoftAccountOAuthScopes": null
-        },
-        "cors": {
-          "allowedOrigins": [
-            "https://functions.azure.com",
-            "https://functions-staging.azure.com",
-            "https://functions-next.azure.com"
-          ],
-          "supportCredentials": false
-        },
-        "localMySqlEnabled": false,
-        "ipSecurityRestrictions": [
-          {
-            "ipAddress": "Any",
-            "action": "Allow",
-            "priority": 1,
-            "name": "Allow all",
-            "description": "Allow all access"
-          }
-        ],
-        "scmIpSecurityRestrictions": [
-          {
-            "ipAddress": "Any",
-            "action": "Allow",
-            "priority": 1,
-            "name": "Allow all",
-            "description": "Allow all access"
-          }
-        ],
-        "scmIpSecurityRestrictionsUseMain": false,
-        "http20Enabled": false,
-        "minTlsVersion": "1.2",
-        "ftpsState": "AllAllowed",
-        "reservedInstanceCount": 0,
-        "fileChangeAuditEnabled": false,
-        "functionsRuntimeScaleMonitoringEnabled": false
-      }
-    },
-    {
-      "type": "Microsoft.Web/sites/hostNameBindings",
-      "apiVersion": "2018-11-01",
-      "name": "[concat(parameters('sites_daweinsgroverfi_name'), '/', parameters('sites_daweinsgroverfi_name'), '.azurewebsites.net')]",
-      "location": "Central US",
-      "dependsOn": [
-        "[resourceId('Microsoft.Web/sites', parameters('sites_daweinsgroverfi_name'))]"
-      ],
-      "properties": {
-        "siteName": "daweinsgroverfi",
-        "hostNameType": "Verified"
-      }
-    },
-    {
       "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
       "apiVersion": "2019-04-01",
       "name": "[concat(parameters('storageAccounts_stordaweinsgrover_name'), '/default/azure-webjobs-hosts')]",
@@ -283,6 +114,46 @@
       ],
       "properties": {
         "publicAccess": "None"
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2018-11-01",
+      "name": "[parameters('name')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Web/serverfarms/', parameters('serverfarms_ASP_name'))]"
+      ],
+      "kind": "functionapp",
+      "properties": {
+        "name": "[parameters('name')]",
+        "siteConfig": {
+          "appSettings": [
+            {
+              "name": "FUNCTIONS_EXTENSION_VERSION",
+              "value": "~2"
+            },
+            {
+              "name": "FUNCTIONS_WORKER_RUNTIME",
+              "value": "dotnet"
+            },
+            {
+              "name": "AzureWebJobsStorage",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',parameters('storageAccountName'),';AccountKey=',listKeys(resourceId('82e247ea-1d53-46d8-8ea4-374aa9dd4ae5','lifelimb-infr','Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2019-06-01').keys[0].value,';EndpointSuffix=','core.windows.net')]"
+            },
+            {
+              "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',parameters('storageAccountName'),';AccountKey=',listKeys(resourceId('82e247ea-1d53-46d8-8ea4-374aa9dd4ae5','lifelimb-infr','Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2019-06-01').keys[0].value,';EndpointSuffix=','core.windows.net')]"
+            },
+            {
+              "name": "WEBSITE_CONTENTSHARE",
+              "value": "[concat(toLower(parameters('name')), '8cfc')]"
+            }
+          ]
+        },
+        "serverFarmId": "[concat('/subscriptions/', parameters('subscriptionId'),'/resourcegroups/', parameters('serverFarmResourceGroup'), '/providers/Microsoft.Web/serverfarms/', parameters('serverfarms_ASP_name'))]",
+        "hostingEnvironment": "[parameters('hostingEnvironment')]",
+        "clientAffinityEnabled": true
       }
     }
   ]
