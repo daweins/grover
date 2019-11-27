@@ -23,12 +23,15 @@ namespace AzureFaultInjector
             try
             {
                 log.LogInformation($"Fault Injector - VM function started at: {DateTime.Now}");
-                string subListStr = Environment.GetEnvironmentVariable("targetSubscriptionIDList");
-                string rgListStr = Environment.GetEnvironmentVariable("targetRGList");
-                string clientId = Environment.GetEnvironmentVariable("clientId");
-                string tenantId = Environment.GetEnvironmentVariable("tenantId");
-                string clientPwd = Environment.GetEnvironmentVariable("clientPassword");
-                string ingestConn = Environment.GetEnvironmentVariable("ingestConn");
+                string subListStr   = Environment.GetEnvironmentVariable("targetSubscriptionIDList");
+                string rgListStr    = Environment.GetEnvironmentVariable("targetRGList");
+                string clientId     = Environment.GetEnvironmentVariable("clientId");
+                string tenantId     = Environment.GetEnvironmentVariable("tenantId");
+                string clientPwd    = Environment.GetEnvironmentVariable("clientPassword");
+                string ingestConn   = Environment.GetEnvironmentVariable("ingestConn");
+                int vmFuzzPct       = Convert.ToInt32(Environment.GetEnvironmentVariable("vmFuzzPct"));
+                int nsgFuzzPct      = Convert.ToInt32(Environment.GetEnvironmentVariable("nsgFuzzPct"));
+
                 log.LogInformation($"Params: SubscriptionIDList: {subListStr}; RGList: {rgListStr}");
 
                 ServicePrincipalLoginInformation spi = new ServicePrincipalLoginInformation
