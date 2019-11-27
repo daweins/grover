@@ -26,7 +26,7 @@ jobs:
       resourceGroupName: 'lifelimb-infr'
       location: 'Central US'
       templateLocation: 'URL of the file'
-      csmFileLink: 'https://raw.githubusercontent.com/daweins/grover/master-faultinjector/azuredeploy-FI.json'
+      csmFileLink: 'https://raw.githubusercontent.com/daweins/grover/master-availabilityhelper/AvailabilityHelpers/azuredeploy-avhelp.json'
       deploymentMode: 'Incremental'
 
   - task: DotNetCoreCLI@2
