@@ -44,4 +44,5 @@ jobs:
       appName: 'daweinsgroverfi'
       package: '$(Build.ArtifactStagingDirectory)/**/*.zip'
       deploymentMethod: 'auto'
-
+      appSettings: '-targetIPList "10.0.1.4;10.0.1.5;10.0.1.6" -slbName "rigbasic-lb" -targetSubscriptionID "82e247ea-1d53-46d8-8ea4-374aa9dd4ae5" -targetRG "lifelimb-rig-basic" -clientId "0985e12e-5b86-4eee-b988-40e7cd67f776" -clientPassword "3c3efd25-066a-4eb3-8cb1-fec6875bd7b0" -tenantId "72f988bf-86f1-41af-91ab-2d7cd011db47"'
+     
