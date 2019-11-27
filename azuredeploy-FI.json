@@ -139,11 +139,11 @@
             },
             {
               "name": "AzureWebJobsStorage",
-              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',parameters('storageAccounts_stordaweinsgrover_name'),';AccountKey=',listKeys(resourceId(subscription().id,'lifelimb-infr','Microsoft.Storage/storageAccounts', parameters('storageAccounts_stordaweinsgrover_name')), '2019-06-01').keys[0].value,';EndpointSuffix=','core.windows.net')]"
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',parameters('storageAccounts_stordaweinsgrover_name'),';AccountKey=',listKeys(resourceId(subscription().subscriptionId,'lifelimb-infr','Microsoft.Storage/storageAccounts', parameters('storageAccounts_stordaweinsgrover_name')), '2019-06-01').keys[0].value,';EndpointSuffix=','core.windows.net')]"
             },
             {
               "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
-              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',parameters('storageAccounts_stordaweinsgrover_name'),';AccountKey=',listKeys(resourceId(subscription().id,'lifelimb-infr','Microsoft.Storage/storageAccounts', parameters('storageAccounts_stordaweinsgrover_name')), '2019-06-01').keys[0].value,';EndpointSuffix=','core.windows.net')]"
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',parameters('storageAccounts_stordaweinsgrover_name'),';AccountKey=',listKeys(resourceId(subscription().subscriptionId,'lifelimb-infr','Microsoft.Storage/storageAccounts', parameters('storageAccounts_stordaweinsgrover_name')), '2019-06-01').keys[0].value,';EndpointSuffix=','core.windows.net')]"
             },
             {
               "name": "WEBSITE_CONTENTSHARE",
@@ -151,7 +151,7 @@
             }
           ]
         },
-        "serverFarmId": "[concat('/subscriptions/', subscription().id ,'/resourcegroups/', resourceGroup().id, '/providers/Microsoft.Web/serverfarms/', parameters('serverfarms_ASP_name'))]",
+        "serverFarmId": "[concat(subscription().id ,'/resourcegroups/', resourceGroup().id, '/providers/Microsoft.Web/serverfarms/', parameters('serverfarms_ASP_name'))]",
         "clientAffinityEnabled": true
       }
     }
