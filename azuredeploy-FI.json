@@ -152,7 +152,6 @@
           ]
         },
         "serverFarmId": "[concat('/subscriptions/', subscription().id ,'/resourcegroups/', resourceGroup().id, '/providers/Microsoft.Web/serverfarms/', parameters('serverfarms_ASP_name'))]",
-        "hostingEnvironment": "[parameters('hostingEnvironment')]",
         "clientAffinityEnabled": true
       }
     }
