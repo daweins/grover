@@ -6,6 +6,10 @@
       "defaultValue": "daweinsgroverfi",
       "type": "String"
     },
+    "sites_daweinsgroveravhelp_name": {
+      "defaultValue": "daweinsgroveravhelp",
+      "type": "String"
+    },
     "components_daweinsgrover_name": {
       "defaultValue": "daweinsgrover",
       "type": "String"
@@ -148,6 +152,45 @@
             {
               "name": "WEBSITE_CONTENTSHARE",
               "value": "[concat(toLower(parameters('sites_daweinsgroverfi_name')), '8cfc')]"
+            }
+          ]
+        },
+        "serverFarmId": "[concat(subscription().id ,'/resourcegroups/', resourceGroup().id, '/providers/Microsoft.Web/serverfarms/', parameters('serverfarms_ASP_name'))]",
+        "clientAffinityEnabled": true
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2018-11-01",
+      "name": "[parameters('sites_daweinsgroveravhelp_name')]",
+      "location": "Central US",
+      "dependsOn": [
+        "[concat('Microsoft.Web/serverfarms/', parameters('serverfarms_ASP_name'))]"
+      ],
+      "kind": "functionapp",
+      "properties": {
+        "name": "[parameters('sites_daweinsgroveravhelp_name')]",
+        "siteConfig": {
+          "appSettings": [
+            {
+              "name": "FUNCTIONS_EXTENSION_VERSION",
+              "value": "~2"
+            },
+            {
+              "name": "FUNCTIONS_WORKER_RUNTIME",
+              "value": "dotnet"
+            },
+            {
+              "name": "AzureWebJobsStorage",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',parameters('storageAccounts_stordaweinsgrover_name'),';AccountKey=',listKeys(resourceId(subscription().subscriptionId,'lifelimb-infr','Microsoft.Storage/storageAccounts', parameters('storageAccounts_stordaweinsgrover_name')), '2019-06-01').keys[0].value,';EndpointSuffix=','core.windows.net')]"
+            },
+            {
+              "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',parameters('storageAccounts_stordaweinsgrover_name'),';AccountKey=',listKeys(resourceId(subscription().subscriptionId,'lifelimb-infr','Microsoft.Storage/storageAccounts', parameters('storageAccounts_stordaweinsgrover_name')), '2019-06-01').keys[0].value,';EndpointSuffix=','core.windows.net')]"
+            },
+            {
+              "name": "WEBSITE_CONTENTSHARE",
+              "value": "[concat(toLower(parameters('sites_daweinsgroveravhelp_name')), '8cfc')]"
             }
           ]
         },
