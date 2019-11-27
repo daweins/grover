@@ -25,7 +25,6 @@ jobs:
   - task: DotNetCoreCLI@2
     inputs:
       command: publish
-      publishWebProjects: True
       arguments: '--configuration Release --output $(Build.ArtifactStagingDirectory)'
       zipAfterPublish: True
   
