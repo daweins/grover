@@ -56,5 +56,5 @@ jobs:
       appName: 'daweinsgroveravhelp'
       package: '$(Build.ArtifactStagingDirectory)/**/*.zip'
       deploymentMethod: 'auto'
-      appSettings: '-FUNCTIONS_EXTENSION_VERSION "~2" -targetSubscriptionID "82e247ea-1d53-46d8-8ea4-374aa9dd4ae5" -targetRG "lifelimb-rig-basic" -clientId "0985e12e-5b86-4eee-b988-40e7cd67f776" -clientPassword "$(clientPassword)" -tenantId "72f988bf-86f1-41af-91ab-2d7cd011db47" -ingestConn "$(ingestConn)" -slbName "rigbasic-lb" -targetIPList "10.0.1.4;10.0.1.5;10.0.1.6"'
-     
+      appSettings: '-FUNCTIONS_EXTENSION_VERSION "~2" -targetSubscriptionIDList "82e247ea-1d53-46d8-8ea4-374aa9dd4ae5" -targetRGList "lifelimb-rig-basic" -clientId "0985e12e-5b86-4eee-b988-40e7cd67f776" -clientPassword "$(clientPassword)" -tenantId "72f988bf-86f1-41af-91ab-2d7cd011db47" -ingestConn "$(ingestConn)" -vmFuzzPct "5" -nsgFuzzPct "2"'
+    
