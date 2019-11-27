@@ -17,6 +17,19 @@ jobs:
   steps:
   - bash: echo "Starting"
 
+  - task: AzureResourceManagerTemplateDeployment@3
+    inputs:
+      deploymentScope: 'Resource Group'
+      ConnectedServiceName: 'daweins''s Azure(82e247ea-1d53-46d8-8ea4-374aa9dd4ae5)'
+      subscriptionName: '82e247ea-1d53-46d8-8ea4-374aa9dd4ae5'
+      action: 'Create Or Update Resource Group'
+      resourceGroupName: 'lifelimb-infr'
+      location: 'Central US'
+      templateLocation: 'URL of the file'
+      csmFileLink: 'https://raw.githubusercontent.com/daweins/grover/master-faultinjector/azuredeploy-FI.json'
+      deploymentMode: 'Incremental'
+
+
   - task: DotNetCoreCLI@2
     inputs:
       command: 'restore'
