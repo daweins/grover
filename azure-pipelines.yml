@@ -56,6 +56,8 @@ jobs:
       command: 'apply'
       workingDirectory: '$(System.DefaultWorkingDirectory)/Monitor'
       environmentServiceNameAzureRM: 'daweins''s Azure(82e247ea-1d53-46d8-8ea4-374aa9dd4ae5)'
+
+
 - job: rigBasic
   dependsOn: setup
   condition: succeeded('setup')
