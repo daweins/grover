@@ -36,6 +36,9 @@ jobs:
   condition: succeeded('setup')
   steps:
   - bash: echo "Deploying Monitor Infrastructure"
+  - task: TerraformInstaller@0
+    inputs:
+      terraformVersion: '0.12.3'
   - task: TerraformTaskV1@0
     inputs:
       provider: 'azurerm'
