@@ -28,7 +28,7 @@ jobs:
       templateLocation: 'URL of the file'
       csmFileLink: 'https://raw.githubusercontent.com/daweins/grover/master/Terraform/azureDeploy-TFshim.json'
       deploymentMode: 'Incremental'
-
+      overrideParameters: -saName "$(tfSAName)"
 
 - job : monitorInfr
   dependsOn: setup
