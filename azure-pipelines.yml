@@ -18,7 +18,15 @@ jobs:
   steps:
   - bash: echo "Setup"
 
-- job: B
+
+- job : monitorInfr
+  dependsOn: setup
+  condition: succeeded('setup')
+  steps:
+  - bash: echo "Deploying Monitor Infrastructure"
+
+
+- job: rigBasic
   dependsOn: setup
   condition: succeeded('setup')
   steps:
@@ -36,7 +44,7 @@ jobs:
       overrideParameters: -adminPassword "$(adminPassword)"
 
 
-- job: C
+- job: rigBasicATM
   dependsOn: setup
   condition: succeeded('setup')
   steps:
