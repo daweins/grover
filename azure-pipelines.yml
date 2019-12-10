@@ -17,6 +17,7 @@ jobs:
 - job: setup
   steps:
   - bash: echo "Setup"
+
   - task: AzureResourceManagerTemplateDeployment@3
     inputs:
       deploymentScope: 'Resource Group'
@@ -43,6 +44,7 @@ jobs:
     inputs:
       provider: 'azurerm'
       command: 'init'
+      workingDirectory: '$(System.DefaultWorkingDirectory)/Monitor'
       backendServiceArm: 'daweins''s Azure(82e247ea-1d53-46d8-8ea4-374aa9dd4ae5)'
       backendAzureRmResourceGroupName: 'lifelimb-terraform'
       backendAzureRmStorageAccountName: 'storetfstate'
