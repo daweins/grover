@@ -29,20 +29,21 @@ jobs:
       csmFileLink: 'https://raw.githubusercontent.com/daweins/grover/master/Terraform/azureDeploy-TFshim.json'
       deploymentMode: 'Incremental'
       overrideParameters: -saName "$(tfSAName)"
+  - task: TerraformTaskV1@0
+    inputs:
+      provider: 'azurerm'
+      command: 'init'
+      backendServiceArm: 'daweins''s Azure(82e247ea-1d53-46d8-8ea4-374aa9dd4ae5)'
+      backendAzureRmResourceGroupName: 'lifelimb-terraform'
+      backendAzureRmStorageAccountName: 'storetfstate'
+      backendAzureRmContainerName: 'terraform'
+      backendAzureRmKey: 'terraform.tfstate'
 
 - job : monitorInfr
   dependsOn: setup
   condition: succeeded('setup')
   steps:
   - bash: echo "Deploying Monitor Infrastructure"
-#- task: TerraformTaskV1@0
-#  inputs:
-#    provider: 'azurerm'
-#    command: 'init'
-#    backendServiceArm: 'daweins''s Azure(82e247ea-1d53-46d8-8ea4-374aa9dd4ae5)'
-#    backendAzureRmResourceGroupName: 'lifelimb-terraform'
-#    backendAzureRmContainerName: 'terraform-config'
-#    backendAzureRmKey: 'terraform-tfstate'
 
 - job: rigBasic
   dependsOn: setup
