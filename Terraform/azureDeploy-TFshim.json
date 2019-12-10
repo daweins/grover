@@ -21,10 +21,13 @@
       "metadata": {
         "description": "Location for all resources."
       }
+    },
+    "saName":{
+        "type":"string"
     }
   },
   "variables": {
-    "storageAccountName": "[concat('store', uniquestring(resourceGroup().id))]"
+    "storageAccountName": "[parameters('saName')]"
   },
   "resources": [
     {
