@@ -14,10 +14,10 @@ resource "azurerm_azuread_application" "aksspaad" {
   oauth2_allow_implicit_flow = true
 }
 
-resource "azurerm_azuread_service_principal" "llakssp" {
+resource "azuread_service_principal" "llakssp" {
   application_id = "${random_uuid.appID.result}"
 }
-resource "azurerm_azuread_service_principal_password" "llakssp" {
+resource "azuread_service_principal_password" "llakssp" {
   service_principal_id = "${random_uuid.appID.result}"
   value                = "${random_uuid.appPwd.result}"
   end_date             = "2021-01-01T01:02:03Z"
