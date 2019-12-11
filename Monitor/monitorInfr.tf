@@ -35,7 +35,7 @@ resource "azurerm_kubernetes_cluster" "llaks" {
   }
 
   service_principal {
-    client_id     = "${azuread_service_principal.llakssp.application_id}"
+    client_id     = "${var.aksSPID}"
     client_secret = "${var.aksSPPwd}"
   }
 
