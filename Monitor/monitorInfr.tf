@@ -13,7 +13,7 @@ resource "azurerm_resource_group" "main" {
 }
 
 resource "azuread_service_principal" "llakssp" {
-  application_id = "${random_uuid.appID.result}"
+  application_id = "${var.aksSPID}"
 }
 resource "azuread_service_principal_password" "llakssp" {
   service_principal_id = "${var.aksSPID}"
