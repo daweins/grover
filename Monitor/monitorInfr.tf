@@ -5,15 +5,6 @@ resource "azurerm_resource_group" "main" {
 resource "random_uuid" "appID" { }
 resource "random_uuid" "appPwd" { }
 
-resource "azurerm_azuread_application" "aksspaad" {
-  name                       = ""
-  homepage                   = "https://lifelimbakssp"
-  identifier_uris            = ["https://lifelimbakssp"]
-  reply_urls                 = ["https://lifelimbakssp"]
-  available_to_other_tenants = false
-  oauth2_allow_implicit_flow = true
-}
-
 resource "azuread_service_principal" "llakssp" {
   application_id = "${random_uuid.appID.result}"
 }
