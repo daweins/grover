@@ -12,14 +12,6 @@ resource "azurerm_resource_group" "main" {
   location = "Central US"
 }
 
-resource "azuread_service_principal" "llakssp" {
-  application_id = "${var.aksSPID}"
-}
-resource "azuread_service_principal_password" "llakssp" {
-  service_principal_id = "${var.aksSPID}"
-  value                = "${var.aksSPPwd}"
-  end_date             = "2021-01-01T01:02:03Z"
-}
 
 resource "azurerm_log_analytics_workspace" "lifelimbmonitor" {
   name                = "lalifelimb"
