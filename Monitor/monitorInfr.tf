@@ -1,16 +1,23 @@
+variable "aksSPID" {
+  type = string
+}
+
+variable "aksSPPwd" {
+  type = string
+}
+
+
 resource "azurerm_resource_group" "main" {
   name     = "lifelimb-monitor-infr"
   location = "Central US"
 }
-resource "random_uuid" "appID" { }
-resource "random_uuid" "appPwd" { }
 
 resource "azuread_service_principal" "llakssp" {
   application_id = "${random_uuid.appID.result}"
 }
 resource "azuread_service_principal_password" "llakssp" {
-  service_principal_id = "${random_uuid.appID.result}"
-  value                = "${random_uuid.appPwd.result}"
+  service_principal_id = "${var.aksSPID}"
+  value                = "${var.aksSPPwd}"
   end_date             = "2021-01-01T01:02:03Z"
 }
 
@@ -37,7 +44,7 @@ resource "azurerm_kubernetes_cluster" "llaks" {
 
   service_principal {
     client_id     = "${azuread_service_principal.llakssp.application_id}"
-    client_secret = "${random_uuid.appPwd.result}"
+    client_secret = "${var.aksSPPwd}"
   }
 
   
