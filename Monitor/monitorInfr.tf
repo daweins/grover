@@ -25,8 +25,8 @@ resource "azuread_service_principal_password" "llakssp" {
 
 resource "azurerm_log_analytics_workspace" "lifelimbmonitor" {
   name                = "lalifelimb"
-  location            = "${azurerm_resource_group.llakssp.location}"
-  resource_group_name = "${azurerm_resource_group.llakssp.name}"
+  location            = "${azurerm_resource_group.main.location}"
+  resource_group_name = "${azurerm_resource_group.main.name}"
   sku                 = "PerGB2018"
   retention_in_days   = 720
 }
@@ -34,8 +34,8 @@ resource "azurerm_log_analytics_workspace" "lifelimbmonitor" {
 
 resource "azurerm_kubernetes_cluster" "llaks" {
   name                = "lifelimb-aks"
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
+  location            = "${azurerm_resource_group.main.location}"
+  resource_group_name = "${azurerm_resource_group.main.name}"
   dns_prefix          = "lifelimbaks"
 
   default_node_pool {
@@ -45,8 +45,8 @@ resource "azurerm_kubernetes_cluster" "llaks" {
   }
 
   service_principal {
-    client_id     = azurerm_azuread_service_principal.llakssp.application_id
-    client_secret = random_uuid.appPwd.result
+    client_id     = "${azuread_service_principal.llakssp.application_id}"
+    client_secret = "${random_uuid.appPwd.result}"
   }
 
   
