@@ -7,18 +7,12 @@ resource "azurerm_resource_group" "basic-rig-rg" {
     location = var.location
 }
 
-resource "azurerm_virtual_network" "basic-rig-vnet" {
- name                = "acctvn"
- address_space       = ["10.0.0.0/16"]
- location            = azurerm_resource_group.basic-rig-rg.location
- resource_group_name = azurerm_resource_group.basic-rig-rg.name
-}
+module "network" {
+  source = "./modules"
 
-resource "azurerm_subnet" "basic-rig-subnet" {
- name                 = "acctsub"
- resource_group_name  = azurerm_resource_group.basic-rig-rg.name
- virtual_network_name = azurerm_virtual_network.basic-rig-vnet.name
- address_prefix       = "10.0.2.0/24"
+  address_space = "10.0.0.0/16"
+  default_subnet_cidr = "10.0.2.0/24"
+  location = var.location
 }
 
 resource "azurerm_public_ip" "basic-rig-pip" {
@@ -29,12 +23,12 @@ resource "azurerm_public_ip" "basic-rig-pip" {
 }
 
 resource "azurerm_lb" "basic-rig-lb" {
- name                = "loadBalancer"
+ name                = "basic-loadBalancer"
  location            = azurerm_resource_group.basic-rig-rg.location
  resource_group_name = azurerm_resource_group.basic-rig-rg.name
 
  frontend_ip_configuration {
-   name                 = "publicIPAddress"
+   name                 = "basic-publicIPAddress"
    public_ip_address_id = azurerm_public_ip.basic-rig-pip.id
  }
 }
@@ -42,21 +36,22 @@ resource "azurerm_lb" "basic-rig-lb" {
 resource "azurerm_lb_backend_address_pool" "basic-rig-lb-beap" {
  resource_group_name = azurerm_resource_group.basic-rig-rg.name
  loadbalancer_id     = azurerm_lb.basic-rig-lb.id
- name                = "BackEndAddressPool"
+ name                = "basic-BackEndAddressPool"
 }
 
 resource "azurerm_network_interface" "basic-rig-vm-nic" {
  count               = var.vmcount
- name                = "acctni${count.index}"
+ name                = "basic-nic${count.index}"
  location            = azurerm_resource_group.basic-rig-rg.location
  resource_group_name = azurerm_resource_group.basic-rig-rg.name
 
  ip_configuration {
    name                          = "testConfiguration"
-   subnet_id                     = azurerm_subnet.basic-rig-subnet.id
+   subnet_id                     = module.network.subnet_instance_id
    private_ip_address_allocation = "dynamic"
    load_balancer_backend_address_pools_ids = [azurerm_lb_backend_address_pool.basic-rig-lb-beap.id]
  }
+ depends_on = [ module.network ]
 }
 
 resource "azurerm_availability_set" "avset" {
@@ -70,7 +65,7 @@ resource "azurerm_availability_set" "avset" {
 
 resource "azurerm_virtual_machine" "basic-rig-vm" {
  count                 = var.vmcount
- name                  = "acctvm${count.index}"
+ name                  = "basic-vm${count.index}"
  location              = azurerm_resource_group.basic-rig-rg.location
  availability_set_id   = azurerm_availability_set.avset.id
  resource_group_name   = azurerm_resource_group.basic-rig-rg.name
