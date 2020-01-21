@@ -24,12 +24,12 @@ resource "azurerm_lb" "basic_rig_lb" {
  }
 }
 
-resource "azurerm_lb_backend_address_pool" "basic_rig-lb-beap" {
+resource "azurerm_lb_backend_address_pool" "basic_rig_lb_beap" {
  resource_group_name = var.resource_group_name
  loadbalancer_id     = azurerm_lb.basic_rig_lb.id
  name                = "basic-BackEndAddressPool"
 }
 
 output "lb_beap_id" {
-    value = azurerm_lb_backend_address_pool.basic_rig_lb-beap.id
+    value = azurerm_lb_backend_address_pool.basic_rig_lb_beap.id
 }
