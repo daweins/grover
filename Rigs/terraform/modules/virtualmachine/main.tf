@@ -66,6 +66,14 @@ variable "vm_os_disk_managed_type" {
   type = string 
 }
 
+variable "network_subnet_id" {
+
+}
+
+variable "loadbalancer_beap_id" {
+
+}
+
 resource "azurerm_network_interface" "vm_nic" {
  count               = var.vmcount
  name                = "${var.vm_name_prefix}-nic${count.index}"
@@ -74,9 +82,9 @@ resource "azurerm_network_interface" "vm_nic" {
 
  ip_configuration {
    name                          = "testConfiguration"
-   subnet_id                     = module.network.subnet_instance_id
+   subnet_id                     = var.network_subnet_id
    private_ip_address_allocation = "dynamic"
-   load_balancer_backend_address_pools_ids = [module.loadbalancer.lb_beap_id]
+   load_balancer_backend_address_pools_ids = [var.loadbalancer_beap_id]
  }
  
 }
@@ -116,7 +124,7 @@ resource "azurerm_virtual_machine" "vm" {
    name              = "${var.vm_os_disk_name}${count.index}"
    caching           = var.vm_os_disk_caching
    create_option     = var.vm_os_disk_create_option
-   managed_disk_type = varm.vm_os_disk_managed_type
+   managed_disk_type = var.vm_os_disk_managed_type
  }
 
  os_profile {
