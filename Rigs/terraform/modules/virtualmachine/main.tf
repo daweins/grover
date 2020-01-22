@@ -26,9 +26,49 @@ variable "adminpassword" {
     type = string 
 }
 
-resource "azurerm_network_interface" "basic_rig_vm_nic" {
+variable "image_publisher" {
+  type = string 
+}
+
+variable "image_offer" {
+  type = string 
+}
+
+variable "image_sku" {
+  type = string 
+}
+
+variable "image_version" {
+  type = string 
+}
+
+variable "vm_name_prefix" {
+  type = string 
+}
+
+variable "vm_size" {
+  type = string
+}
+
+variable "vm_os_disk_name" {
+  type = string 
+}
+
+variable "vm_os_disk_caching" {
+  type = string 
+}
+
+variable "vm_os_disk_create_option" {
+  type = string 
+}
+
+variable "vm_os_disk_managed_type" {
+  type = string 
+}
+
+resource "azurerm_network_interface" "vm_nic" {
  count               = var.vmcount
- name                = "basic-nic${count.index}"
+ name                = "${var.vm_name_prefix}-nic${count.index}"
  location            = var.location
  resource_group_name = var.resource_group_name
 
@@ -42,7 +82,7 @@ resource "azurerm_network_interface" "basic_rig_vm_nic" {
 }
 
 resource "azurerm_availability_set" "avset" {
- name                         = "avset"
+ name                         = "${var.vm_name_prefix}-avset"
  location                     = var.location
  resource_group_name          = var.resource_group_name
  platform_fault_domain_count  = var.Fault_Domain_Count
@@ -50,14 +90,14 @@ resource "azurerm_availability_set" "avset" {
  managed                      = true
 }
 
-resource "azurerm_virtual_machine" "basic_rig_vm" {
+resource "azurerm_virtual_machine" "vm" {
  count                 = var.vmcount
- name                  = "basic_vm${count.index}"
+ name                  = "${var.vm_name_prefix}${count.index}"
  location              = var.location
  availability_set_id   = azurerm_availability_set.avset.id
  resource_group_name   = var.resource_group_name
- network_interface_ids = [element(azurerm_network_interface.basic_rig_vm_nic.*.id, count.index)]
- vm_size               = "Standard_DS1_v2"
+ network_interface_ids = [element(azurerm_network_interface.vm_nic.*.id, count.index)]
+ vm_size               = var.vm_size
 
  # Uncomment this line to delete the OS disk automatically when deleting the VM
  # delete_os_disk_on_termination = true
@@ -66,23 +106,23 @@ resource "azurerm_virtual_machine" "basic_rig_vm" {
  # delete_data_disks_on_termination = true
 
  storage_image_reference {
-   publisher = "Canonical"
-   offer     = "UbuntuServer"
-   sku       = "16.04-LTS"
-   version   = "latest"
+   publisher = var.image_publisher
+   offer     = var.image_offer
+   sku       = var.image_sku
+   version   = var.image_version
  }
 
  storage_os_disk {
-   name              = "osdisk${count.index}"
-   caching           = "ReadWrite"
-   create_option     = "FromImage"
-   managed_disk_type = "Standard_LRS"
+   name              = "${var.vm_os_disk_name}${count.index}"
+   caching           = var.vm_os_disk_caching
+   create_option     = var.vm_os_disk_create_option
+   managed_disk_type = varm.vm_os_disk_managed_type
  }
 
  os_profile {
-   computer_name  = "webserver${count.index}"
-   admin_username = "var.adminuser"
-   admin_password = "var.adminpassword"
+   computer_name  = "${var.vm_name_prefix}${count.index}"
+   admin_username = var.adminuser
+   admin_password = var.adminpassword
  }
 
  os_profile_linux_config {
