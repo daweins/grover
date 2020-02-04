@@ -1,81 +1,75 @@
 variable "subscription_id" {
-  description = "the guid of the subscription"
-  type        = string
-}
-
-variable "rg_name" {
-    description = "The Resource Group Name"
-    type = string
-    default = "lifelimb-rig-basictf"
+    description = "the guid of the subscription"
 }
 
 variable "location" {
-  description = "The region location of the deployment."
-  default     = "centralus"
+    description = "The region location of the deployment."
 }
 
 variable "vmcount" {
-  description = "The number of vms to create"
-  default     = "5"
+    description = "The number of vms to create"
 }
 
 variable "adminuser" {
-  description = "The admin username for the vm"
-  default     = "msadmin"
+    description = "The admin username for the vm"
 }
 
 variable "adminpassword" {
-  description = "The password for the admin user"
+    description = "The password for the admin user"
 }
 
 variable "Fault_Domain_Count" {
-  description = "The number of fault domains"
-  default     = "3"
+    description = "The number of fault domains"
 }
 
 variable "Update_Domain_Count" {
-  description = "The number of update domains"
-  default     = "3"
+    description = "The number of update domains"
 }
 
 variable "image_publisher" {
-  type    = string
-  default = "MicrosoftWindowsServer"
+    type = string
 }
 
 variable "image_offer" {
-  type    = string
-  default = "WindowsServer"
+    type = string
 }
 
 variable "image_sku" {
-  type    = string
-  default = "2019-Datacenter"
+    type = string
 }
 
 variable "image_version" {
-  type    = string
-  default = "latest"
+    type = string
 }
 
 variable "vm_name_prefix" {
-  type    = string
-  default = "llbasictf"
+    type = string
 }
 
 variable "vm_size" {
-  type    = string
-  default = "Standard_DS1_v2"
+    type = string 
 }
 
+variable "vm_os_disk_name" {
+    type = string
+}
+
+variable "vm_os_disk_caching" {
+    type = string 
+}
+
+variable "vm_os_disk_create_option" {
+    type = string 
+}
+
+variable "vm_os_disk_managed_type" {
+    type = string 
+}
 
 variable "address_space" {
-  type    = string
-  default = "10.0.1.0/24"
+    type = string 
 }
 
 variable "default_subnet_cidr" {
-  type    = string
-  default = "10.0.1.0/24"
+    type = string 
 }
-

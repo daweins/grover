@@ -13,7 +13,7 @@ variable "location" {
 }
 
 resource "azurerm_resource_group" "basic_rig_network_rg" {
-    name = "lifelimb-rig-basictf"
+    name = "Grover-Network"
     location = var.location
 }
 
