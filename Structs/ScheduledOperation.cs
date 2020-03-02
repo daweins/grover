@@ -9,13 +9,15 @@ namespace AzureFaultInjector
     public class ScheduledOperation
     {
 
-        [JsonProperty(PropertyName = "scheduleTime")]
-        public DateTime scheduleTime { get; set; }
+        [JsonProperty(PropertyName = "scheduleTimeTicks")]
+        public long scheduleTimeTicks { get; set; }
 
 
-        [JsonProperty(PropertyName = "opType")]
-        public string opType { get; set; }
+        [JsonProperty(PropertyName = "operation")]
+        public string operation { get; set; }
 
+        [JsonProperty(PropertyName = "targetType")]
+        public string targetType { get; set; }
 
         [JsonProperty(PropertyName = "target")]
         public string target { get; set; }
@@ -35,10 +37,11 @@ namespace AzureFaultInjector
 
 
 
-    public ScheduledOperation(DateTime iScheduleTime, string iDescription, string iOpType, string iTarget)
+    public ScheduledOperation(DateTime iScheduleTime, string iDescription, string iTargetType, string iOperation,  string iTarget)
         {
-            scheduleTime = iScheduleTime;
-            opType = iOpType;
+            scheduleTimeTicks = iScheduleTime.Ticks;
+            targetType = iTargetType;
+            operation = iOperation;
             target = iTarget;
             description = iDescription;
             id = Guid.NewGuid().ToString();
@@ -48,12 +51,12 @@ namespace AzureFaultInjector
         public PartitionKey getPartitionKey()
         {
             // TODO: Think about the partitionkey choice
-            return new PartitionKey(opType);
+            return new PartitionKey(targetType);
         }
 
         override public string ToString()
         {
-            return $"ScheduledOperation: id={id}; scheduleTime: {scheduleTime.ToString}; opType: {opType}; target: {target}; description: {description} ";
+            return $"ScheduledOperation: id={id}; scheduleTime: { new DateTime(scheduleTimeTicks).ToString()}; targetType: { targetType};opType: {operation}; target: {target}; description: {description} ";
 
         }
         static void createLink(ScheduledOperation a, ScheduledOperation b)

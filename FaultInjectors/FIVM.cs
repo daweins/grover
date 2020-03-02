@@ -10,16 +10,16 @@ namespace AzureFaultInjector
 {
     class FIVM : FI
     {
-        public FIVM (ILogger iLog, Microsoft.Azure.Management.Fluent.IAzure iAzure, string iRGName, string kustoConn, string kustoDBName, string kustoTableName) : base(iLog,iAzure, iRGName, kustoConn, kustoDBName, kustoTableName)
+        public FIVM (ILogger iLog, Microsoft.Azure.Management.Fluent.IAzure iAzure, string iTarget) : base(iLog,iAzure, iTarget)
         {
-            myResourceCollection = iAzure.VirtualMachines.ListByResourceGroup(curRGName);
+            myResource= iAzure.VirtualMachines.GetById(iTarget) ;
             
             myTargetType = "VM";
         }
 
-        protected override bool turnOn(Microsoft.Azure.Management.ResourceManager.Fluent.Core.IResource curResource)
+        protected override bool turnOn()
         {
-            Microsoft.Azure.Management.Compute.Fluent.IVirtualMachine curVM = (Microsoft.Azure.Management.Compute.Fluent.IVirtualMachine)curResource;
+            Microsoft.Azure.Management.Compute.Fluent.IVirtualMachine curVM = (Microsoft.Azure.Management.Compute.Fluent.IVirtualMachine)myResource;
 
             try
             {
@@ -28,14 +28,14 @@ namespace AzureFaultInjector
             }
             catch(Exception err)
             {
-                log.LogError($"Error turning on VM {curSubName} -> {curRGName} -> {curVM.Name}: {err}");
+                log.LogError($"Error turning on VM {curSubName} -> {curTarget} -> {curVM.Name}: {err}");
                 return false;
             }
         }
 
-        protected override bool turnOff(Microsoft.Azure.Management.ResourceManager.Fluent.Core.IResource curResource)
+        protected override bool turnOff()
         {
-            Microsoft.Azure.Management.Compute.Fluent.IVirtualMachine curVM = (Microsoft.Azure.Management.Compute.Fluent.IVirtualMachine)curResource;
+            Microsoft.Azure.Management.Compute.Fluent.IVirtualMachine curVM = (Microsoft.Azure.Management.Compute.Fluent.IVirtualMachine)myResource;
 
             try
             {
@@ -44,7 +44,7 @@ namespace AzureFaultInjector
             }
             catch (Exception err)
             {
-                log.LogError($"Error turning on VM {curSubName} -> {curRGName} -> {curVM.Name}: {err}");
+                log.LogError($"Error turning on VM {curSubName} -> {curTarget} -> {curVM.Name}: {err}");
                 return false;
             }
 

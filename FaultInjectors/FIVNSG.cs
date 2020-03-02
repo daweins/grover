@@ -16,17 +16,17 @@ namespace AzureFaultInjector
         static int myNewRulePriority = 100;
 
 
-        public FINSG (ILogger iLog, Microsoft.Azure.Management.Fluent.IAzure iAzure, string iRGName, string kustoConn, string kustoDBName, string kustoTableName) : base(iLog,iAzure, iRGName, kustoConn, kustoDBName, kustoTableName)
+        public FINSG (ILogger iLog, Microsoft.Azure.Management.Fluent.IAzure iAzure, string iTarget) : base(iLog,iAzure, iTarget)
         {
-            myResourceCollection = iAzure.NetworkSecurityGroups.ListByResourceGroup(iRGName);
+            myResource = iAzure.NetworkSecurityGroups.GetById(iTarget);
             
             myTargetType = "NSG";
         }
 
 
-        protected override bool turnOn(Microsoft.Azure.Management.ResourceManager.Fluent.Core.IResource curResource)
+        protected override bool turnOn()
         {
-            Microsoft.Azure.Management.Network.Fluent.INetworkSecurityGroup curNSG = (Microsoft.Azure.Management.Network.Fluent.INetworkSecurityGroup)curResource;
+            Microsoft.Azure.Management.Network.Fluent.INetworkSecurityGroup curNSG = (Microsoft.Azure.Management.Network.Fluent.INetworkSecurityGroup)myResource;
 
             try
             {
@@ -39,15 +39,15 @@ namespace AzureFaultInjector
             }
             catch (Exception err)
             {
-                log.LogError($"Error unblocking NSG {curSubName} -> {curRGName} -> {curNSG.Name}: {err}");
+                log.LogError($"Error unblocking NSG {curSubName} -> {curTarget} -> {curNSG.Name}: {err}");
                 return false;
             }
 
         }
 
-        protected override bool turnOff(Microsoft.Azure.Management.ResourceManager.Fluent.Core.IResource curResource)
+        protected override bool turnOff()
         {
-            Microsoft.Azure.Management.Network.Fluent.INetworkSecurityGroup curNSG = (Microsoft.Azure.Management.Network.Fluent.INetworkSecurityGroup)curResource;
+            Microsoft.Azure.Management.Network.Fluent.INetworkSecurityGroup curNSG = (Microsoft.Azure.Management.Network.Fluent.INetworkSecurityGroup)myResource;
 
             try
             {
@@ -80,7 +80,7 @@ namespace AzureFaultInjector
             }
             catch (Exception err)
             {
-                log.LogError($"Error blocking NSG {curSubName} -> {curRGName} -> {curNSG.Name}: {err}");
+                log.LogError($"Error blocking NSG {curSubName} -> {curTarget} -> {curNSG.Name}: {err}");
                 return false;
             }
         }

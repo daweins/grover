@@ -16,7 +16,7 @@ namespace AzureFaultInjector
 
 
         protected string curSubName;
-        protected string curRGName;
+        protected string curTarget;
         protected Microsoft.Azure.Management.Fluent.IAzure myAzure;
         protected ILogger log;
         protected IKustoQueuedIngestClient ingestClient;
@@ -26,29 +26,49 @@ namespace AzureFaultInjector
         // Must be defined by subclass
         // TODO: Enforce this
         protected string myTargetType = "Unknown";
-        protected IEnumerable<Microsoft.Azure.Management.ResourceManager.Fluent.Core.IResource> myResourceCollection = null;
+        protected Microsoft.Azure.Management.ResourceManager.Fluent.Core.IResource myResource = null;
 
 
-        abstract protected bool turnOn(Microsoft.Azure.Management.ResourceManager.Fluent.Core.IResource curResource);
-        abstract protected bool turnOff(Microsoft.Azure.Management.ResourceManager.Fluent.Core.IResource curResource);
+        abstract protected bool turnOn();
+        abstract protected bool turnOff();
 
 
 
-        protected FI(ILogger iLog, Microsoft.Azure.Management.Fluent.IAzure iAzure, string iRGName, string kustoConn, string kustoDBName, string kustoTableName)
+        protected FI(ILogger iLog, Microsoft.Azure.Management.Fluent.IAzure iAzure, string iTarget)
         {
-            curRGName = iRGName;
+            curTarget = iTarget;
             log = iLog;
             curSubName = iAzure.SubscriptionId;
 
-            ingestClient = KustoIngestFactory.CreateQueuedIngestClient(kustoConn);
-            ingestProps = new KustoIngestionProperties(kustoDBName, kustoTableName);
+            string ingestConn   = Environment.GetEnvironmentVariable("ingestConn");
+            string ingestDB     = Environment.GetEnvironmentVariable("ingestDB");
+            string ingestTable  = Environment.GetEnvironmentVariable("ingestTable");
+
+            ingestClient = KustoIngestFactory.CreateQueuedIngestClient(ingestConn);
+            ingestProps = new KustoIngestionProperties(ingestDB, ingestTable);
             ingestProps.Format = Kusto.Data.Common.DataSourceFormat.csv;
 
 
         }
 
+        public bool processOp(string operation)
+        {
+            switch(operation)
+            {
+                case "on":
+                    this.turnOn();
+                    return true;
+                case "off":
+                    this.turnOff();
+                    return true;
+                default:
+                    log.LogError($"Unknown op: {operation} for {this.ToString()}");
+                    break;
+            }
+            return false;
+        }
 
-        public async Task<bool> Fuzz(int pct)
+       /* public async Task<bool> Fuzz(int pct)
         {
             try
             {
@@ -100,7 +120,7 @@ namespace AzureFaultInjector
                 return false;
             }
         }
-
+        */
 
 
     }
