@@ -8,6 +8,7 @@ using Microsoft.Azure.Management.ResourceGraph;
 using Microsoft.Azure.Management.ResourceGraph.Models;
 using Newtonsoft.Json.Linq;
 using System.Linq;
+using Microsoft.Azure.Management.Compute.Fluent;
 
 namespace AzureFaultInjector
 {
@@ -39,16 +40,25 @@ namespace AzureFaultInjector
             }
         }
 
-        protected override bool turnOff()
+        protected override bool turnOff(int numMinutes = 5)
         {
             Microsoft.Azure.Management.Compute.Fluent.IVirtualMachine curVM = (Microsoft.Azure.Management.Compute.Fluent.IVirtualMachine)myResource;
 
             try
             {
-                log.LogInformation($"Turning off VM: {curVM.Id}");
-                curVM.PowerOff();
-                log.LogInformation($"Turned off VM: {curVM.Id}");
+                if(curVM.PowerState == PowerState.Running)
+                {
+                    log.LogInformation($"Turning off VM: {curVM.Id}");
+                    curVM.PowerOff();
+                    log.LogInformation($"Turned off VM: {curVM.Id}. Creating the compensating On action");
+                    ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddMinutes(numMinutes), "Compensating On action for turning off a VM", "vm", "on", curTarget);
+                    ScheduledOperationHelper.addSchedule(onOp, log);
 
+                }
+                else
+                {
+                    log.LogInformation($"Turning off VM {curVM.Id}, but it was already not running");
+                }
                 return true;
             }
             catch (Exception err)
@@ -92,9 +102,6 @@ namespace AzureFaultInjector
 
                 ScheduledOperation newOffOp = new ScheduledOperation(DateTime.Now, "Sample VM Off", "vm", "off", vmIDList[vmID]);
                 results.Add(newOffOp);
-
-                ScheduledOperation newOnOp = new ScheduledOperation(DateTime.Now.AddMinutes(5), "Sample VM On", "vm", "on", vmIDList[vmID]);
-                results.Add(newOnOp);
 
                 return results;
             }

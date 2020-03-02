@@ -48,7 +48,7 @@ namespace AzureFaultInjector
 
         }
 
-        protected override bool turnOff()
+        protected override bool turnOff(int numMinutes = 5)
         {
             Microsoft.Azure.Management.Network.Fluent.INetworkSecurityGroup curNSG = (Microsoft.Azure.Management.Network.Fluent.INetworkSecurityGroup)myResource;
 
@@ -91,7 +91,7 @@ namespace AzureFaultInjector
         static public  List<ScheduledOperation> getSampleSchedule(ResourceGraphClient resourceGraphClient, List<string> subList, ILogger log)
         {
 
-            //// Get VMs
+            //// Get NSGs
             //string vmListQuery = @"Resources 
             //         | where type =~ 'Microsoft.Network/virtualNetworks'
             //        | where tags.allowFaultInjection=~'true'

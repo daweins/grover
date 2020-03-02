@@ -87,29 +87,7 @@ namespace AzureFaultInjector
                 }
             }
             log.LogInformation($"Sample Schedule: {opsToAdd.Count} items");
-            using (CosmosClient cosmosClient = new CosmosClient(cosmosConn))
-            {
-                Database curDB = cosmosClient.GetDatabase(cosmosDBName);
-                Container cosmosScheduleContainer = curDB.GetContainer(cosmosScheduleContainerName);
-
-               foreach(ScheduledOperation newOp in opsToAdd)
-                {
-                    ItemResponse<ScheduledOperation> createOp = cosmosScheduleContainer.CreateItemAsync(newOp, newOp.getPartitionKey()).Result;
-                    // Only create the Off if the On is scheduled successfully
-                    if ((int)createOp.StatusCode >= 200 && (int)createOp.StatusCode < 300)
-                    {
-                        log.LogInformation($"Created schedule: {createOp.StatusCode} : {newOp.ToString()}");
-
-                    }
-                    else
-                    {
-                        log.LogError($"Failed creating the schedule, as the on schedule failed: {createOp.StatusCode}; {newOp.ToString()}");
-                    }
-
-                }
-               
-
-            }
+            ScheduledOperationHelper.addSchedule(opsToAdd,log);
 
 
         }
