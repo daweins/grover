@@ -49,15 +49,12 @@ namespace AzureFaultInjector
                 AzureCredentials myAzCreds = new AzureCredentials(spi, tenantId, AzureEnvironment.AzureGlobalCloud);
                 Microsoft.Azure.Management.Fluent.IAzure myAz = Azure.Configure().Authenticate(myAzCreds).WithSubscription(subListStr);
 
-
-
-
                 doQueuePopulate(myAzCreds, subList, log);
                 doQueueProcess(myAz, log);
 
                 
 
-                log.LogInformation($"Fault Injector - Error Populatorfunction finished at: {DateTime.Now}");
+                log.LogInformation($"Fault Injector finished at: {DateTime.Now}");
 
             }
             catch (Exception err)
@@ -76,39 +73,41 @@ namespace AzureFaultInjector
             ResourceGraphClient resourceGraphClient = new ResourceGraphClient(myAzCreds);
 
             // TODO: Move some of this into the FI objects
-            // Get VMs
-            string vmListQuery = @"Resources 
-                    | where tags.allowFaultInjection=~'true'
-                    | project id
-                    ";
-
-            QueryResponse vmListResponse = resourceGraphClient.Resources(new QueryRequest(subList, vmListQuery));
-            log.LogInformation($"Got VMs: {vmListResponse.Count}");
-            JObject vmJObj = JObject.Parse(vmListResponse.Data.ToString());
-            IList<string> vmIDList = vmJObj.SelectTokens("$.rows[*][0]").Select(s => (string)s).ToList();
-
+            List<ScheduledOperation> opsToAdd = new List<ScheduledOperation>();
+            foreach(Type curFI in FI.getSubTypes())
+            {
+                try
+                {
+                    List<ScheduledOperation> newOps = (List<ScheduledOperation>)curFI.GetMethod("getSampleSchedule").Invoke(null, new object[] { resourceGraphClient, subList,log });
+                    opsToAdd.AddRange(newOps);
+                }
+                catch(Exception sampleError)
+                {
+                    log.LogWarning($"Warning: trouble creating a sample schedule for {curFI.Name}. It might not have implemented the getSampleSchedule static function (note - C# doesnt support static abstracts) : {sampleError}");
+                }
+            }
+            log.LogInformation($"Sample Schedule: {opsToAdd.Count} items");
             using (CosmosClient cosmosClient = new CosmosClient(cosmosConn))
             {
                 Database curDB = cosmosClient.GetDatabase(cosmosDBName);
                 Container cosmosScheduleContainer = curDB.GetContainer(cosmosScheduleContainerName);
 
-                // Sample create a VM schedule off/on
-                ScheduledOperation newOffOp = new ScheduledOperation(DateTime.Now, "Sample VM Off", "vm","off", vmIDList[0]);
-                ScheduledOperation newOnOp  = new ScheduledOperation(DateTime.Now.AddMinutes(5), "Sample VM On", "vm", "on", vmIDList[0]);
-
-                // Only create the Off if the On is scheduled successfully
-                ItemResponse<ScheduledOperation> onCreate = cosmosScheduleContainer.CreateItemAsync(newOnOp, newOnOp.getPartitionKey()).Result;
-                log.LogInformation($"Created Off schedule: {onCreate.StatusCode} : {newOnOp.ToString()}");
-                if ((int)onCreate.StatusCode >= 200 && (int)onCreate.StatusCode < 300)
+               foreach(ScheduledOperation newOp in opsToAdd)
                 {
-                    ItemResponse<ScheduledOperation> offCreate = cosmosScheduleContainer.CreateItemAsync(newOffOp, newOffOp.getPartitionKey()).Result;
-                    log.LogInformation($"Created Off schedule: {offCreate.StatusCode} : {newOffOp.ToString()}");
+                    ItemResponse<ScheduledOperation> createOp = cosmosScheduleContainer.CreateItemAsync(newOp, newOp.getPartitionKey()).Result;
+                    // Only create the Off if the On is scheduled successfully
+                    if ((int)createOp.StatusCode >= 200 && (int)createOp.StatusCode < 300)
+                    {
+                        log.LogInformation($"Created schedule: {createOp.StatusCode} : {newOp.ToString()}");
+
+                    }
+                    else
+                    {
+                        log.LogError($"Failed creating the schedule, as the on schedule failed: {createOp.StatusCode}; {newOp.ToString()}");
+                    }
 
                 }
-                else
-                {
-                    log.LogError($"Skipping creating the off schedule, as the on schedule failed: {onCreate.StatusCode}");
-                }
+               
 
             }
 
@@ -136,38 +135,40 @@ namespace AzureFaultInjector
                 while (readyOps.HasMoreResults)
                 {
                     FeedResponse<ScheduledOperation> response = readyOps.ReadNextAsync().Result;
-                    ScheduledOperation curOp = response.First();
-                    bool opResult = false;
-                    switch (curOp.targetType)
+                    foreach (ScheduledOperation curOp in response)
                     {
-                        case "vm":
-
-                            FIVM vmFuzzer = new FIVM(log, myAz, curOp.target);
-                            opResult = vmFuzzer.processOp(curOp.operation);
-
-                            break;
-                        case "nsg":
-                            FINSG nsgFuzzer = new FINSG(log, myAz, curOp.target);
-                            opResult = nsgFuzzer.processOp(curOp.operation);
-                            break;
-
-                        default:
-                            log.LogError("Got an op we don't know how to handle!");
-                            break;
-                    }
-                    if (opResult)
-                    {
-                        // Delete it so we don't redo it
-                        try
+                        bool opResult = false;
+                        log.LogInformation($"Processing op: {curOp}");
+                        switch (curOp.targetType)
                         {
-                            ItemResponse<ScheduledOperation> deleteResult = cosmosScheduleContainer.DeleteItemAsync<ScheduledOperation>(curOp.id, curOp.getPartitionKey()).Result;
+                            case "vm":
+                                FIVM vmFuzzer = new FIVM(log, myAz, curOp.target);
+                                opResult = vmFuzzer.processOp(curOp.operation);
+
+                                break;
+                            case "nsg":
+                                FINSG nsgFuzzer = new FINSG(log, myAz, curOp.target);
+                                opResult = nsgFuzzer.processOp(curOp.operation);
+                                break;
+
+                            default:
+                                log.LogError("Got an op we don't know how to handle!");
+                                break;
                         }
-                        catch(Exception deleteOpErr)
+                        if (opResult)
                         {
-                            log.LogError($"Error deleting an op from Cosmos: {deleteOpErr}");
+                            // Delete it so we don't redo it
+                            try
+                            {
+                                ItemResponse<ScheduledOperation> deleteResult = cosmosScheduleContainer.DeleteItemAsync<ScheduledOperation>(curOp.id, curOp.getPartitionKey()).Result;
+                                log.LogInformation($"Completed op {curOp} - deleted from Cosmosb");
+                            }
+                            catch (Exception deleteOpErr)
+                            {
+                                log.LogError($"Error deleting an op from Cosmos: {deleteOpErr}");
+                            }
                         }
                     }
-
 
                 }
 

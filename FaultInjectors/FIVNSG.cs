@@ -4,7 +4,10 @@ using System.Text;
 
 using Microsoft.Azure.Management.Network.Fluent;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
 
+using Microsoft.Azure.Management.ResourceGraph;
+using Microsoft.Azure.Management.ResourceGraph.Models;
 
 namespace AzureFaultInjector
 {
@@ -83,6 +86,24 @@ namespace AzureFaultInjector
                 log.LogError($"Error blocking NSG {curSubName} -> {curTarget} -> {curNSG.Name}: {err}");
                 return false;
             }
+        }
+
+        static public  List<ScheduledOperation> getSampleSchedule(ResourceGraphClient resourceGraphClient, List<string> subList, ILogger log)
+        {
+
+            //// Get VMs
+            //string vmListQuery = @"Resources 
+            //         | where type =~ 'Microsoft.Network/virtualNetworks'
+            //        | where tags.allowFaultInjection=~'true'
+            //        | project id
+            //        ";
+
+            //QueryResponse vmListResponse = resourceGraphClient.Resources(new QueryRequest(subList, vmListQuery));
+            //log.LogInformation($"Got VMs: {vmListResponse.Count}");
+            //JObject vmJObj = JObject.Parse(vmListResponse.Data.ToString());
+            //IList<string> vmIDList = vmJObj.SelectTokens("$.rows[*][0]").Select(s => (string)s).ToList();
+            return new List<ScheduledOperation>();
+
         }
 
     }

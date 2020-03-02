@@ -6,6 +6,10 @@ using System.Threading;
 using Microsoft.Extensions.Logging;
 using System.IO;
 using System.Threading.Tasks;
+using System.Reflection;
+using System.Linq;
+using Microsoft.Azure.Management.ResourceGraph;
+using Microsoft.Azure.Management.ResourceGraph.Models;
 
 namespace AzureFaultInjector
 {
@@ -32,9 +36,14 @@ namespace AzureFaultInjector
         abstract protected bool turnOn();
         abstract protected bool turnOff();
 
+        // This should be overridden by most implementations. C# doesn't have abstract statics, or I'd use that. 
+        static public List<ScheduledOperation> getSampleSchedule(ResourceGraphClient resourceGraphClient, List<string> subList, ILogger log)
+        {
+            return new List<ScheduledOperation>();
+        }
 
 
-        protected FI(ILogger iLog, Microsoft.Azure.Management.Fluent.IAzure iAzure, string iTarget)
+            protected FI(ILogger iLog, Microsoft.Azure.Management.Fluent.IAzure iAzure, string iTarget)
         {
             curTarget = iTarget;
             log = iLog;
@@ -47,9 +56,14 @@ namespace AzureFaultInjector
             ingestClient = KustoIngestFactory.CreateQueuedIngestClient(ingestConn);
             ingestProps = new KustoIngestionProperties(ingestDB, ingestTable);
             ingestProps.Format = Kusto.Data.Common.DataSourceFormat.csv;
-
-
         }
+
+        // Used to allow for easy "plugin" extension
+        static public IEnumerable<Type> getSubTypes()
+        {            
+                return Assembly.GetExecutingAssembly().GetTypes().Where(t => typeof(FI).IsAssignableFrom(t));
+        }
+
 
         public bool processOp(string operation)
         {
