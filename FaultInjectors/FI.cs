@@ -42,9 +42,13 @@ namespace AzureFaultInjector
         {
             return new List<ScheduledOperation>();
         }
+        // This should be overridden by most implementations. C# doesn't have abstract statics, or I'd use that. 
+        static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, int azToKill, ILogger log)
+        {
+            return new List<ScheduledOperation>();
+        }
 
-
-            protected FI(ILogger iLog, Microsoft.Azure.Management.Fluent.IAzure iAzure, string iTarget)
+        protected FI(ILogger iLog, Microsoft.Azure.Management.Fluent.IAzure iAzure, string iTarget)
         {
             curTarget = iTarget;
             log = iLog;

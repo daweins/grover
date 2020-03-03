@@ -122,5 +122,14 @@ namespace AzureFaultInjector
             }
         }
 
+        static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, int azToKill, ILogger log)
+        {
+            // Network doesn't AZ - return nothing
+            log.LogInformation("NSG: Killing AZ - return nothing as NSG doesn't have AZ")
+            List<ScheduledOperation> results = new List<ScheduledOperation>();
+            return results;
+        }
+
+
     }
 }

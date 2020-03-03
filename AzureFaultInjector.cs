@@ -67,30 +67,61 @@ namespace AzureFaultInjector
 
         static private void doQueuePopulate(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, ILogger log)
         {
-            string cosmosConn = Environment.GetEnvironmentVariable("cosmosConn");
-            string cosmosDBName = Environment.GetEnvironmentVariable("cosmosDB");
-            string cosmosScheduleContainerName = Environment.GetEnvironmentVariable("cosmosScheduleContainer");
-
-            //TODO: test if we need to add max object appSetting to allow > 100 items in the query
-            // Moving back to a RG List ResourceGraphClient resourceGraphClient = new ResourceGraphClient(myAzCreds);
-
-            // TODO: Move some of this into the FI objects
-            List<ScheduledOperation> opsToAdd = new List<ScheduledOperation>();
-            foreach(Type curFI in FI.getSubTypes())
+            double nextAction = rnd.NextDouble();
+          //  nextAction = 0.9;
+            if (nextAction < 0.7)
             {
-                try
-                {
-                    List<ScheduledOperation> newOps = (List<ScheduledOperation>)curFI.GetMethod("getSampleSchedule").Invoke(null, new object[] { myAz, rgList ,log });
-                    opsToAdd.AddRange(newOps);
-                }
-                catch(Exception sampleError)
-                {
-                    log.LogWarning($"Warning: trouble creating a sample schedule for {curFI.Name}. It might not have implemented the getSampleSchedule static function (note - C# doesnt support static abstracts) : {sampleError}");
-                }
+                // Take a break
+                return;
             }
-            log.LogInformation($"Sample Schedule: {opsToAdd.Count} items");
-            ScheduledOperationHelper.addSchedule(opsToAdd,log);
+            else if (nextAction < 0.8)
+            {
 
+
+                // Have each type roll the dice to generate a single error
+
+                List<ScheduledOperation> opsToAdd = new List<ScheduledOperation>();
+                foreach (Type curFI in FI.getSubTypes())
+                {
+                    try
+                    {
+                        List<ScheduledOperation> newOps = (List<ScheduledOperation>)curFI.GetMethod("getSampleSchedule").Invoke(null, new object[] { myAz, rgList, log });
+                        opsToAdd.AddRange(newOps);
+                    }
+                    catch (Exception sampleError)
+                    {
+                        log.LogWarning($"Warning: trouble creating a sample schedule for {curFI.Name}. It might not have implemented the getSampleSchedule static function (note - C# doesnt support static abstracts) : {sampleError}");
+                    }
+                }
+                log.LogInformation($"Sample Schedule: {opsToAdd.Count} items");
+                ScheduledOperationHelper.addSchedule(opsToAdd, log);
+            }
+            else
+            {
+
+                // Trigger an AZ outage
+                int azToKill = rnd.Next(3) + 1;
+                log.LogInformation($"Trying to kill AZ {azToKill}");
+
+                List<ScheduledOperation> opsToAdd = new List<ScheduledOperation>();
+                foreach (Type curFI in FI.getSubTypes())
+                {
+                    try
+                    {
+                        log.LogInformation($"Trying to AZKill in type of: {curFI.FullName}");
+                        List<ScheduledOperation> newOps = (List<ScheduledOperation>)curFI.GetMethod("killAZ").Invoke(null, new object[] { myAz, rgList, azToKill, log });
+                        opsToAdd.AddRange(newOps);
+                    }
+                    catch (Exception sampleError)
+                    {
+                        log.LogWarning($"Warning: trouble creating a sample schedule for {curFI.Name}. It might not have implemented the killAZ static function (note - C# doesnt support static abstracts) : {sampleError}");
+                    }
+                }
+                log.LogInformation($"AZKill Schedule: {opsToAdd.Count} items");
+                ScheduledOperationHelper.addSchedule(opsToAdd, log);
+
+
+            }
 
         }
 

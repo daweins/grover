@@ -99,5 +99,32 @@ namespace AzureFaultInjector
             }
         }
 
+        static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, int azToKill, ILogger log)
+        {
+            List<ScheduledOperation> results = new List<ScheduledOperation>();
+            foreach(IResourceGroup curRG in rgList)
+            {
+                log.LogInformation($"VM AZKill: checking RG: {curRG.Name}");
+                List<IVirtualMachine> vmList = new List<IVirtualMachine>(myAz.VirtualMachines.ListByResourceGroup(curRG.Name));
+                foreach(IVirtualMachine curVM in vmList)
+                {
+                    // This is interesting that a VM object can be in multiple AZs... let's just roll with it
+                    foreach(var curZone in curVM.AvailabilityZones)
+                    {
+                        if(curZone.Value.ToString() == azToKill.ToString())
+                        {
+                            log.LogInformation($"AZKill: Got a Zone {azToKill} match for {curVM.Id} - scheduling for termination");
+                            
+                            ScheduledOperation newOffOp = new ScheduledOperation(DateTime.Now, $"Killing AZ {azToKill} - VM Off", "vm", "off", curVM.Id);
+                            results.Add(newOffOp);
+                        }
+                    }
+                }
+
+            }
+            return results;
+        }
+
+
     }
 }
