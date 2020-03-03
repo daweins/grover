@@ -9,6 +9,8 @@ using Microsoft.Azure.Management.ResourceGraph.Models;
 using Newtonsoft.Json.Linq;
 using System.Linq;
 using Microsoft.Azure.Management.Compute.Fluent;
+using Microsoft.Azure.Management.Fluent;
+using Microsoft.Azure.Management.ResourceManager.Fluent;
 
 namespace AzureFaultInjector
 {
@@ -69,7 +71,7 @@ namespace AzureFaultInjector
 
         }
 
-        static public List<ScheduledOperation> getSampleSchedule(ResourceGraphClient resourceGraphClient,List<string> subList, ILogger log)
+        static public List<ScheduledOperation> getSampleSchedule(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, ILogger log)
         {
             List<ScheduledOperation> results = new List<ScheduledOperation>();
             // Should I fault?
@@ -81,26 +83,16 @@ namespace AzureFaultInjector
             else
             {
 
-
-
                 log.LogInformation("Adding a VM sample schedule this iteration");
 
-                // Get VMs
-                string vmListQuery = @"Resources 
-                    | where type =~ 'Microsoft.Compute/virtualMachines'
-                    | where tags.allowFaultInjection=~'true'
-                    | project id
-                    ";
+                // Pick a random RG from the list
+                int rgIndex = rnd.Next(rgList.Count);
+                List<IVirtualMachine> vmList = new List<IVirtualMachine>(  myAz.VirtualMachines.ListByResourceGroup(rgList[rgIndex].Name));
 
-                QueryResponse vmListResponse = resourceGraphClient.Resources(new QueryRequest(subList, vmListQuery));
-                log.LogInformation($"Got VMs: {vmListResponse.Count}");
-                JObject vmJObj = JObject.Parse(vmListResponse.Data.ToString());
-                IList<string> vmIDList = vmJObj.SelectTokens("$.rows[*][0]").Select(s => (string)s).ToList();
+                // Pick a random VM from the RG
+                int vmID = rnd.Next(vmList.Count);
 
-                // Pick 1 VM
-                int vmID = rnd.Next(vmIDList.Count);
-
-                ScheduledOperation newOffOp = new ScheduledOperation(DateTime.Now, "Sample VM Off", "vm", "off", vmIDList[vmID]);
+                ScheduledOperation newOffOp = new ScheduledOperation(DateTime.Now, "Sample VM Off", "vm", "off", vmList[vmID].Id);
                 results.Add(newOffOp);
 
                 return results;

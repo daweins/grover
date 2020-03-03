@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Linq;
 using Microsoft.Azure.Management.ResourceGraph;
 using Microsoft.Azure.Management.ResourceGraph.Models;
+using Microsoft.Azure.Management.ResourceManager.Fluent;
 
 namespace AzureFaultInjector
 {
@@ -37,7 +38,7 @@ namespace AzureFaultInjector
         abstract protected bool turnOff(int numMinutes);
 
         // This should be overridden by most implementations. C# doesn't have abstract statics, or I'd use that. 
-        static public List<ScheduledOperation> getSampleSchedule(ResourceGraphClient resourceGraphClient, List<string> subList, ILogger log)
+        static public List<ScheduledOperation> getSampleSchedule(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, ILogger log)
         {
             return new List<ScheduledOperation>();
         }

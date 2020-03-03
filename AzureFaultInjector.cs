@@ -27,19 +27,16 @@ namespace AzureFaultInjector
             try
             {
                 log.LogInformation($"Fault Injector - VM function started at: {DateTime.Now}");
-                string subListStr = Environment.GetEnvironmentVariable("targetSubscriptionIDList");
+                string subId = Environment.GetEnvironmentVariable("targetSubscription");
                 string rgListStr = Environment.GetEnvironmentVariable("targetRGList");
                 string clientId = Environment.GetEnvironmentVariable("clientId");
                 string tenantId = Environment.GetEnvironmentVariable("tenantId");
                 string clientPwd = Environment.GetEnvironmentVariable("clientPassword");
                 int vmFuzzPct = Convert.ToInt32(Environment.GetEnvironmentVariable("vmFuzzPct"));
                 int nsgFuzzPct = Convert.ToInt32(Environment.GetEnvironmentVariable("nsgFuzzPct"));
+                string rgFilterTag = Environment.GetEnvironmentVariable("rgFilterTag");
+                
 
-                log.LogInformation($"Params: SubscriptionIDList: {subListStr}; RGList: {rgListStr}");
-
-                // Build the sub list
-                List<string> subList = new List<string>(subListStr.Split(","));
-                log.LogInformation($"Found {subList.Count} subscriptions to target");
                 ServicePrincipalLoginInformation spi = new ServicePrincipalLoginInformation
                 {
                     ClientId = clientId,
@@ -47,9 +44,14 @@ namespace AzureFaultInjector
 
                 };
                 AzureCredentials myAzCreds = new AzureCredentials(spi, tenantId, AzureEnvironment.AzureGlobalCloud);
-                Microsoft.Azure.Management.Fluent.IAzure myAz = Azure.Configure().Authenticate(myAzCreds).WithSubscription(subListStr);
+                Microsoft.Azure.Management.Fluent.IAzure myAz = Azure.Configure().Authenticate(myAzCreds).WithSubscription(subId);
 
-                doQueuePopulate(myAzCreds, subList, log);
+
+                // Centralize the filtering of target RGs for fault injection
+                List<IResourceGroup> rgList = new List<IResourceGroup>(myAz.ResourceGroups.ListByTag(rgFilterTag, "true"));
+                log.LogInformation($"Finding ResourceGroups in subscription {subId} with Tag {rgFilterTag} with a value of true");
+                    
+                doQueuePopulate(myAz, rgList, log);
                 doQueueProcess(myAz, log);
 
                 
@@ -63,14 +65,14 @@ namespace AzureFaultInjector
             }
         }
 
-        static private void doQueuePopulate(AzureCredentials myAzCreds, List<string> subList, ILogger log)
+        static private void doQueuePopulate(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, ILogger log)
         {
             string cosmosConn = Environment.GetEnvironmentVariable("cosmosConn");
             string cosmosDBName = Environment.GetEnvironmentVariable("cosmosDB");
             string cosmosScheduleContainerName = Environment.GetEnvironmentVariable("cosmosScheduleContainer");
 
             //TODO: test if we need to add max object appSetting to allow > 100 items in the query
-            ResourceGraphClient resourceGraphClient = new ResourceGraphClient(myAzCreds);
+            // Moving back to a RG List ResourceGraphClient resourceGraphClient = new ResourceGraphClient(myAzCreds);
 
             // TODO: Move some of this into the FI objects
             List<ScheduledOperation> opsToAdd = new List<ScheduledOperation>();
@@ -78,7 +80,7 @@ namespace AzureFaultInjector
             {
                 try
                 {
-                    List<ScheduledOperation> newOps = (List<ScheduledOperation>)curFI.GetMethod("getSampleSchedule").Invoke(null, new object[] { resourceGraphClient, subList,log });
+                    List<ScheduledOperation> newOps = (List<ScheduledOperation>)curFI.GetMethod("getSampleSchedule").Invoke(null, new object[] { myAz, rgList ,log });
                     opsToAdd.AddRange(newOps);
                 }
                 catch(Exception sampleError)
@@ -117,7 +119,7 @@ namespace AzureFaultInjector
                     {
                         bool opResult = false;
                         log.LogInformation($"Processing op: {curOp}");
-                        switch (curOp.targetType)
+                        switch (curOp.targetType.ToLower())
                         {
                             case "vm":
                                 FIVM vmFuzzer = new FIVM(log, myAz, curOp.target);

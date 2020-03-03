@@ -8,7 +8,8 @@ using Newtonsoft.Json.Linq;
 
 using Microsoft.Azure.Management.ResourceGraph;
 using Microsoft.Azure.Management.ResourceGraph.Models;
-
+using System.Linq;
+using Microsoft.Azure.Management.ResourceManager.Fluent;
 namespace AzureFaultInjector
 {
     class FINSG : FI
@@ -79,6 +80,10 @@ namespace AzureFaultInjector
                     .WithPriority(100)
                     .Attach()
                     .Apply();
+                log.LogInformation($"Turned off NSG: {curNSG.Id}. Creating the compensating On action");
+                ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddMinutes(numMinutes), "Compensating On action for turning off a NSG", "nsg", "on", curTarget);
+                ScheduledOperationHelper.addSchedule(onOp, log);
+
                 return true;
             }
             catch (Exception err)
@@ -88,22 +93,33 @@ namespace AzureFaultInjector
             }
         }
 
-        static public  List<ScheduledOperation> getSampleSchedule(ResourceGraphClient resourceGraphClient, List<string> subList, ILogger log)
+        static public  List<ScheduledOperation> getSampleSchedule(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, ILogger log)
         {
 
-            //// Get NSGs
-            //string vmListQuery = @"Resources 
-            //         | where type =~ 'Microsoft.Network/virtualNetworks'
-            //        | where tags.allowFaultInjection=~'true'
-            //        | project id
-            //        ";
+            List<ScheduledOperation> results = new List<ScheduledOperation>();
+            // Should I fault?
+            if (rnd.NextDouble() > 0.3)
+            {
+                log.LogInformation("Not adding anything to the sample schedule this iteration");
+                return results;
+            }
+            else
+            {
 
-            //QueryResponse vmListResponse = resourceGraphClient.Resources(new QueryRequest(subList, vmListQuery));
-            //log.LogInformation($"Got VMs: {vmListResponse.Count}");
-            //JObject vmJObj = JObject.Parse(vmListResponse.Data.ToString());
-            //IList<string> vmIDList = vmJObj.SelectTokens("$.rows[*][0]").Select(s => (string)s).ToList();
-            return new List<ScheduledOperation>();
+                log.LogInformation("Adding a NSG sample schedule this iteration");
 
+                // Pick a random RG from the list
+                int rgIndex = rnd.Next(rgList.Count);
+                List<INetworkSecurityGroup> NSGList = new List<INetworkSecurityGroup>(myAz.NetworkSecurityGroups.ListByResourceGroup(rgList[rgIndex].Name));
+
+                // Pick a random NSG from the RG
+                int NSGID = rnd.Next(NSGList.Count);
+
+                ScheduledOperation newOffOp = new ScheduledOperation(DateTime.Now, "Sample NSG Off", "nsg", "off", NSGList[NSGID].Id);
+                results.Add(newOffOp);
+
+                return results;
+            }
         }
 
     }
