@@ -10,6 +10,11 @@ using Microsoft.Azure.Management.ResourceGraph;
 using Microsoft.Azure.Management.ResourceGraph.Models;
 using System.Linq;
 using Microsoft.Azure.Management.ResourceManager.Fluent;
+using System.Threading.Tasks;
+
+
+
+
 namespace AzureFaultInjector
 {
     class FINSG : FI
@@ -125,11 +130,30 @@ namespace AzureFaultInjector
         static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, int azToKill, ILogger log)
         {
             // Network doesn't AZ - return nothing
-            log.LogInformation("NSG: Killing AZ - return nothing as NSG doesn't have AZ")
+            log.LogInformation("NSG: Killing AZ - return nothing as NSG doesn't have AZ");
             List<ScheduledOperation> results = new List<ScheduledOperation>();
             return results;
         }
 
+        static public List<ScheduledOperation> killRegion(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string regionToKill, ILogger log)
+        {
+            List<ScheduledOperation> results = new List<ScheduledOperation>();
+            foreach (IResourceGroup curRG in rgList)
+            {
+                log.LogInformation($"NSG Region Kill for region:  {regionToKill}: checking RG: {curRG.Name}");
+                List<INetworkSecurityGroup> nsgList = new List<INetworkSecurityGroup>(myAz.NetworkSecurityGroups.ListByResourceGroup(curRG.Name));
+                foreach (INetworkSecurityGroup curNSG in nsgList)
+                {
+                    if (curNSG.RegionName == regionToKill)
+                    {
+                        log.LogInformation($"Region Kill: Got a Region {regionToKill} match for {curNSG.Id} - scheduling for termination");
+                        ScheduledOperation newOffOp = new ScheduledOperation(DateTime.Now, $"Killing Region {regionToKill} - NSG Off", "nsg", "off", curNSG.Id);
+                        results.Add(newOffOp);
+                    }
+                }
 
+            }
+            return results;
+        }
     }
 }

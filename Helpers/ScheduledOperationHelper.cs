@@ -32,7 +32,7 @@ namespace AzureFaultInjector
                     try
                     {
                         ItemResponse<ScheduledOperation> createOp = cosmosScheduleContainer.CreateItemAsync(newOp, newOp.getPartitionKey()).Result;
-                        log.LogInformation($"Created Op: {createOp.ToString()}");
+                        log.LogInformation($"Created Op: {newOp.ToString()}");
                     }
                     catch (Exception err)
                     {

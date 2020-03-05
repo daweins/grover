@@ -13,6 +13,9 @@ using Newtonsoft.Json.Serialization;
 using Newtonsoft.Json.Linq;
 using System.Linq;
 using Microsoft.Azure.Cosmos;
+using System.Collections.Specialized;
+
+
 
 namespace AzureFaultInjector
 {
@@ -68,7 +71,7 @@ namespace AzureFaultInjector
         static private void doQueuePopulate(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, ILogger log)
         {
             double nextAction = rnd.NextDouble();
-          //  nextAction = 0.9;
+            nextAction = 0.95;
             if (nextAction < 0.7)
             {
                 // Take a break
@@ -96,7 +99,7 @@ namespace AzureFaultInjector
                 log.LogInformation($"Sample Schedule: {opsToAdd.Count} items");
                 ScheduledOperationHelper.addSchedule(opsToAdd, log);
             }
-            else
+            else if (nextAction < 0.9)
             {
 
                 // Trigger an AZ outage
@@ -114,7 +117,39 @@ namespace AzureFaultInjector
                     }
                     catch (Exception sampleError)
                     {
-                        log.LogWarning($"Warning: trouble creating a sample schedule for {curFI.Name}. It might not have implemented the killAZ static function (note - C# doesnt support static abstracts) : {sampleError}");
+                        log.LogWarning($"Warning: trouble creating an AZ Kill schedule for {curFI.Name}. It might not have implemented the killAZ static function (note - C# doesnt support static abstracts) : {sampleError}");
+                    }
+                }
+                log.LogInformation($"AZKill Schedule: {opsToAdd.Count} items");
+                ScheduledOperationHelper.addSchedule(opsToAdd, log);
+
+
+            }
+            else
+            {
+                // Trigger a regional outage
+                // Find a list of interesting regions - use the RGList as a starter
+                HashSet<string> regionList = new HashSet<string>();
+                foreach(IResourceGroup curRG in rgList)
+                {
+                    regionList.Add(curRG.RegionName);
+                }
+                int regionIndex = rnd.Next(regionList.Count);
+                string curRegion = regionList.ElementAt<string>(regionIndex);
+                log.LogInformation($"RegionKill: {curRegion}");
+
+                List<ScheduledOperation> opsToAdd = new List<ScheduledOperation>();
+                foreach (Type curFI in FI.getSubTypes())
+                {
+                    try
+                    {
+                        log.LogInformation($"Trying to Kill Region in type of: {curFI.FullName}");
+                        List<ScheduledOperation> newOps = (List<ScheduledOperation>)curFI.GetMethod("killRegion").Invoke(null, new object[] { myAz, rgList, curRegion, log });
+                        opsToAdd.AddRange(newOps);
+                    }
+                    catch (Exception sampleError)
+                    {
+                        log.LogWarning($"Warning: trouble creating a region Kill  schedule for {curFI.Name}. It might not have implemented the regionToKill static function (note - C# doesnt support static abstracts) : {sampleError}");
                     }
                 }
                 log.LogInformation($"AZKill Schedule: {opsToAdd.Count} items");

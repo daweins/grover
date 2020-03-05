@@ -11,6 +11,7 @@ using System.Linq;
 using Microsoft.Azure.Management.Compute.Fluent;
 using Microsoft.Azure.Management.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent;
+using System.Threading.Tasks;
 
 namespace AzureFaultInjector
 {
@@ -51,7 +52,7 @@ namespace AzureFaultInjector
                 if(curVM.PowerState == PowerState.Running)
                 {
                     log.LogInformation($"Turning off VM: {curVM.Id}");
-                    curVM.PowerOff();
+                    curVM.PowerOffAsync();   // We don't really care if this fails - worst case we turn it on when it's already on
                     log.LogInformation($"Turned off VM: {curVM.Id}. Creating the compensating On action");
                     ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddMinutes(numMinutes), "Compensating On action for turning off a VM", "vm", "on", curTarget);
                     ScheduledOperationHelper.addSchedule(onOp, log);
@@ -70,6 +71,7 @@ namespace AzureFaultInjector
             }
 
         }
+
 
         static public List<ScheduledOperation> getSampleSchedule(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, ILogger log)
         {
@@ -104,7 +106,7 @@ namespace AzureFaultInjector
             List<ScheduledOperation> results = new List<ScheduledOperation>();
             foreach(IResourceGroup curRG in rgList)
             {
-                log.LogInformation($"VM AZKill: checking RG: {curRG.Name}");
+                log.LogInformation($"VM AZKill for Zone {azToKill}: checking RG: {curRG.Name}");
                 List<IVirtualMachine> vmList = new List<IVirtualMachine>(myAz.VirtualMachines.ListByResourceGroup(curRG.Name));
                 foreach(IVirtualMachine curVM in vmList)
                 {
@@ -125,6 +127,27 @@ namespace AzureFaultInjector
             return results;
         }
 
+
+        static public List<ScheduledOperation> killRegion(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string regionToKill, ILogger log)
+        {
+            List<ScheduledOperation> results = new List<ScheduledOperation>();
+            foreach (IResourceGroup curRG in rgList)
+            {
+                log.LogInformation($"VM Region Kill for region:  {regionToKill}: checking RG: {curRG.Name}");
+                List<IVirtualMachine> vmList = new List<IVirtualMachine>(myAz.VirtualMachines.ListByResourceGroup(curRG.Name));
+                foreach (IVirtualMachine curVM in vmList)
+                {
+                    if (curVM.RegionName == regionToKill)
+                    {
+                        log.LogInformation($"RegionKill: Got a Region {regionToKill} match for {curVM.Id} - scheduling for termination");
+                        ScheduledOperation newOffOp = new ScheduledOperation(DateTime.Now, $"Killing Region {regionToKill} - VM Off", "vm", "off", curVM.Id);
+                        results.Add(newOffOp);
+                    }
+                }
+
+            }
+            return results;
+        }
 
     }
 }

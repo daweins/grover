@@ -11,6 +11,8 @@ using System.Linq;
 using Microsoft.Azure.Management.ResourceGraph;
 using Microsoft.Azure.Management.ResourceGraph.Models;
 using Microsoft.Azure.Management.ResourceManager.Fluent;
+using System.Threading.Tasks;
+
 
 namespace AzureFaultInjector
 {
@@ -47,8 +49,12 @@ namespace AzureFaultInjector
         {
             return new List<ScheduledOperation>();
         }
+        static public List<ScheduledOperation> killRegion(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string regionToKill, ILogger log)
+        {
+            return new List<ScheduledOperation>();
+        }
 
-        protected FI(ILogger iLog, Microsoft.Azure.Management.Fluent.IAzure iAzure, string iTarget)
+            protected FI(ILogger iLog, Microsoft.Azure.Management.Fluent.IAzure iAzure, string iTarget)
         {
             curTarget = iTarget;
             log = iLog;
