@@ -31,7 +31,7 @@ namespace AzureFaultInjector
             }
 }
 
-        protected override bool turnOn()
+        protected override bool turnOn(string payload)
         {
             Microsoft.Azure.Management.AppService.Fluent.IWebApp curWeb = (Microsoft.Azure.Management.AppService.Fluent.IWebApp)myResource;
 

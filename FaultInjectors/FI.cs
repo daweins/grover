@@ -36,7 +36,7 @@ namespace AzureFaultInjector
         protected Microsoft.Azure.Management.ResourceManager.Fluent.Core.IResource myResource = null;
 
 
-        abstract protected bool turnOn();
+        abstract protected bool turnOn(string payload);
         abstract protected bool turnOff(int numMinutes);
 
         // This should be overridden by most implementations. C# doesn't have abstract statics, or I'd use that. 
@@ -76,12 +76,12 @@ namespace AzureFaultInjector
         }
 
 
-        public bool processOp(string operation)
+        public bool processOp(string operation, string payload)
         {
             switch(operation)
             {
                 case "on":
-                    this.turnOn();
+                    this.turnOn(payload);
                     return true;
                 case "off":
                     this.turnOff(5);

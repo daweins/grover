@@ -31,19 +31,24 @@ namespace AzureFaultInjector
         public string description { get; set; }
 
 
+        [JsonProperty(PropertyName = "payload")]
+        public string payload { get; set; }
+
+
         [JsonProperty(PropertyName = "relatedOps")]
         public List<string> relatedOps { get; set; }  
 
 
 
 
-    public ScheduledOperation(DateTime iScheduleTime, string iDescription, string iTargetType, string iOperation,  string iTarget)
+    public ScheduledOperation(DateTime iScheduleTime, string iDescription, string iTargetType, string iOperation,  string iTarget, string iPayload = "")
         {
             scheduleTimeTicks = iScheduleTime.Ticks;
             targetType = iTargetType;
             operation = iOperation;
             target = iTarget;
             description = iDescription;
+            payload = iPayload;
             id = Guid.NewGuid().ToString();
             relatedOps = new List<string>();
         }

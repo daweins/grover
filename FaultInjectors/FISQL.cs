@@ -13,6 +13,12 @@ using Microsoft.Azure.Management.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent;
 using System.Threading.Tasks;
 using Microsoft.Azure.Management.Sql.Fluent;
+using Microsoft.Azure.Management.Sql.Fluent.SqlFirewallRule;
+using Microsoft.Azure.Management.Sql.Fluent.SqlFirewallRuleOperations;
+
+
+//TODO: Desired improvements include: handling service endpoints
+
 
 namespace AzureFaultInjector
 {
@@ -32,15 +38,33 @@ namespace AzureFaultInjector
             }
         }
 
-        protected override bool turnOn()
+        protected override bool turnOn(string payload)
         {
             Microsoft.Azure.Management.Sql.Fluent.ISqlServer curSQL = (Microsoft.Azure.Management.Sql.Fluent.ISqlServer)myResource;
 
             try
             {
-                log.LogInformation($"Turning on SQL: {curSQL.Id}");
-                //TODO - figure this out
-                //curSQL.Start();
+                log.LogInformation($"Turning on SQL by recreating the firewall rules: {curSQL.Id}");
+                //TODO: evaluate this
+                // Don't need to re-flip the Geo - leave the DB where it is  
+
+                // Recreate the firewall rules
+                //TODO: do the AzureServices special case
+
+                SQLFirewallDefinition rulesToRecreate = SQLFirewallDefinition.deserialize(payload);
+                foreach(SQLFirewallRule curRule in rulesToRecreate.ruleList)
+                {
+                    string ruleName = curRule.name;
+                    string startIP = curRule.startIP;
+                    string endIP = curRule.endIP;
+                    log.LogInformation($"Recreating sql firewall rule: {ruleName} {startIP} - {endIP}");
+                    curSQL.FirewallRules.Define(ruleName).WithIPAddressRange(startIP, endIP).Create();
+                }
+                if(rulesToRecreate.allowAzureAccess)
+                {
+                    log.LogInformation($"Allowing Azure access");
+                    curSQL.EnableAccessFromAzureServices();
+                }
                 log.LogInformation($"Turned on SQL: {curSQL.Id}");
 
                 return true;
@@ -73,27 +97,38 @@ namespace AzureFaultInjector
                     }
                 }
                 //TODO: find a way to impact existing connections
+                SQLFirewallDefinition rulesToPreserve = new SQLFirewallDefinition();
+
                 log.LogInformation($"All DBs started failover, now block the current server to simulate failure in the firewall. Note - this won't impact existing connections");
                 {
                     // TODO: Need to list these so we can save & rehydrate them later
-
-                    curSQL.RemoveAccessFromAzureServices();
+                 
                     foreach (var curFirewallRule in curSQL.FirewallRules.List())
                     {
+                        if (curFirewallRule.Name == "AllowAllWindowsAzureIps")
+                        {
+                            curSQL.RemoveAccessFromAzureServices();
+                            rulesToPreserve.allowAzureAccess = true;
+                        }
+                        else
+                        {
+                            rulesToPreserve.addRule(curFirewallRule.Name, curFirewallRule.StartIPAddress, curFirewallRule.EndIPAddress);
+                        }
                         curSQL.FirewallRules.Delete(curFirewallRule.Name);
                     }
 
                 }
 
                 log.LogInformation($"Turned off SQL: {curSQL.Id}. Creating the compensating On action");
-                ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddMinutes(numMinutes), $"Compensating On action for turning off a {myTargetType}", myTargetType, "on", curTarget);
+                string iPayload = rulesToPreserve.toJSON();
+                ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddMinutes(numMinutes), $"Compensating On action for turning off a {myTargetType}", myTargetType, "on", curTarget, iPayload);
                 ScheduledOperationHelper.addSchedule(onOp, log);
 
                 return true;
             }
             catch (Exception err)
             {
-                log.LogError($"Error turning on SQL {curSubName} -> {curTarget} -> {curSQL.Name}: {err}");
+                log.LogError($"Error turning off SQL {curSubName} -> {curTarget} -> {curSQL.Name}: {err}");
                 return false;
             }
 

@@ -189,20 +189,20 @@ namespace AzureFaultInjector
                         {
                             case "vm":
                                 FIVM vmFuzzer = new FIVM(log, myAz, curOp.target);
-                                opResult = vmFuzzer.processOp(curOp.operation);
+                                opResult = vmFuzzer.processOp(curOp.operation, curOp.payload);
 
                                 break;
                             case "nsg":
                                 FINSG nsgFuzzer = new FINSG(log, myAz, curOp.target);
-                                opResult = nsgFuzzer.processOp(curOp.operation);
+                                opResult = nsgFuzzer.processOp(curOp.operation, curOp.payload);
                                 break;
                             case "web":
                                 FIWeb webFuzzer = new FIWeb(log, myAz, curOp.target);
-                                opResult = webFuzzer.processOp(curOp.operation);
+                                opResult = webFuzzer.processOp(curOp.operation, curOp.payload);
                                 break;
                             case "sql":
                                 FISQL sqlFuzzer = new FISQL(log, myAz, curOp.target);
-                                opResult = sqlFuzzer.processOp(curOp.operation);
+                                opResult = sqlFuzzer.processOp(curOp.operation, curOp.payload);
                                 break;
                             default:
                                 log.LogError("Got an op we don't know how to handle!");

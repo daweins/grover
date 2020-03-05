@@ -32,7 +32,7 @@ namespace AzureFaultInjector
             }
 }
 
-        protected override bool turnOn()
+        protected override bool turnOn(string payload)
         {
             Microsoft.Azure.Management.Compute.Fluent.IVirtualMachine curVM = (Microsoft.Azure.Management.Compute.Fluent.IVirtualMachine)myResource;
 

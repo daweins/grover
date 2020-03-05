@@ -40,7 +40,7 @@ namespace AzureFaultInjector
 }
 
 
-        protected override bool turnOn()
+        protected override bool turnOn(string payload)
         {
             Microsoft.Azure.Management.Network.Fluent.INetworkSecurityGroup curNSG = (Microsoft.Azure.Management.Network.Fluent.INetworkSecurityGroup)myResource;
 
