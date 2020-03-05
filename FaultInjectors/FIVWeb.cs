@@ -84,7 +84,7 @@ namespace AzureFaultInjector
         {
             List<ScheduledOperation> results = new List<ScheduledOperation>();
             // Should I fault?
-            if (rnd.NextDouble() > 0.3)
+            if (rnd.NextDouble() > 0.3) 
             {
                 log.LogInformation("Not adding anything to the sample schedule this iteration");
                 return results;
