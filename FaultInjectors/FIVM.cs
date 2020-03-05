@@ -17,12 +17,20 @@ namespace AzureFaultInjector
 {
     class FIVM : FI
     {
+
+        static string myTargetType = "VM";
+
         public FIVM (ILogger iLog, Microsoft.Azure.Management.Fluent.IAzure iAzure, string iTarget) : base(iLog,iAzure, iTarget)
         {
-            myResource= iAzure.VirtualMachines.GetById(iTarget) ;
-            
-            myTargetType = "VM";
-        }
+            try
+            {
+                myResource = iAzure.VirtualMachines.GetById(iTarget);
+            }
+            catch(Exception err)
+            {
+                log.LogError($"Error in {myTargetType} constructor: {err.ToString()}");
+            }
+}
 
         protected override bool turnOn()
         {
@@ -30,15 +38,15 @@ namespace AzureFaultInjector
 
             try
             {
-                log.LogInformation($"Turning on VM: {curVM.Id}");
-                curVM.Start();
-                log.LogInformation($"Turned on VM: {curVM.Id}");
+                log.LogInformation($"Turning on {myTargetType}: {curVM.Id}");
+                curVM.StartAsync();
+                log.LogInformation($"Turning on {myTargetType} (async): {curVM.Id}");
 
                 return true;
             }
             catch(Exception err)
             {
-                log.LogError($"Error turning on VM {curSubName} -> {curTarget} -> {curVM.Name}: {err}");
+                log.LogError($"Error turning on {myTargetType} {curSubName} -> {curTarget} -> {curVM.Name}: {err}");
                 return false;
             }
         }
@@ -53,20 +61,20 @@ namespace AzureFaultInjector
                 {
                     log.LogInformation($"Turning off VM: {curVM.Id}");
                     curVM.PowerOffAsync();   // We don't really care if this fails - worst case we turn it on when it's already on
-                    log.LogInformation($"Turned off VM: {curVM.Id}. Creating the compensating On action");
-                    ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddMinutes(numMinutes), "Compensating On action for turning off a VM", "vm", "on", curTarget);
+                    log.LogInformation($"Turning off VM (async): {curVM.Id}. Creating the compensating On action");
+                    ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddMinutes(numMinutes), $"Compensating On action for turning off a {myTargetType}", myTargetType, "on", curTarget);
                     ScheduledOperationHelper.addSchedule(onOp, log);
 
                 }
                 else
                 {
-                    log.LogInformation($"Turning off VM {curVM.Id}, but it was already not running");
+                    log.LogInformation($"Turning off {myTargetType} {curVM.Id}, but it was already not running");
                 }
                 return true;
             }
             catch (Exception err)
             {
-                log.LogError($"Error turning on VM {curSubName} -> {curTarget} -> {curVM.Name}: {err}");
+                log.LogError($"Error turning on {myTargetType} {curSubName} -> {curTarget} -> {curVM.Name}: {err}");
                 return false;
             }
 
@@ -85,18 +93,19 @@ namespace AzureFaultInjector
             else
             {
 
-                log.LogInformation("Adding a VM sample schedule this iteration");
+                log.LogInformation($"Adding a {myTargetType} sample schedule this iteration");
 
                 // Pick a random RG from the list
                 int rgIndex = rnd.Next(rgList.Count);
                 List<IVirtualMachine> vmList = new List<IVirtualMachine>(  myAz.VirtualMachines.ListByResourceGroup(rgList[rgIndex].Name));
+                if (vmList.Count > 0 )
+                {
+                    // Pick a random VM from the RG
+                    int vmID = rnd.Next(vmList.Count);
 
-                // Pick a random VM from the RG
-                int vmID = rnd.Next(vmList.Count);
-
-                ScheduledOperation newOffOp = new ScheduledOperation(DateTime.Now, "Sample VM Off", "vm", "off", vmList[vmID].Id);
-                results.Add(newOffOp);
-
+                    ScheduledOperation newOffOp = new ScheduledOperation(DateTime.Now, $"Sample {myTargetType} Off", myTargetType, "off", vmList[vmID].Id);
+                    results.Add(newOffOp);
+                }
                 return results;
             }
         }
@@ -106,7 +115,7 @@ namespace AzureFaultInjector
             List<ScheduledOperation> results = new List<ScheduledOperation>();
             foreach(IResourceGroup curRG in rgList)
             {
-                log.LogInformation($"VM AZKill for Zone {azToKill}: checking RG: {curRG.Name}");
+                log.LogInformation($"{myTargetType} AZKill for Zone {azToKill}: checking RG: {curRG.Name}");
                 List<IVirtualMachine> vmList = new List<IVirtualMachine>(myAz.VirtualMachines.ListByResourceGroup(curRG.Name));
                 foreach(IVirtualMachine curVM in vmList)
                 {
@@ -117,7 +126,7 @@ namespace AzureFaultInjector
                         {
                             log.LogInformation($"AZKill: Got a Zone {azToKill} match for {curVM.Id} - scheduling for termination");
                             
-                            ScheduledOperation newOffOp = new ScheduledOperation(DateTime.Now, $"Killing AZ {azToKill} - VM Off", "vm", "off", curVM.Id);
+                            ScheduledOperation newOffOp = new ScheduledOperation(DateTime.Now, $"Killing AZ {azToKill} - {myTargetType} Off", myTargetType, "off", curVM.Id);
                             results.Add(newOffOp);
                         }
                     }
@@ -133,14 +142,14 @@ namespace AzureFaultInjector
             List<ScheduledOperation> results = new List<ScheduledOperation>();
             foreach (IResourceGroup curRG in rgList)
             {
-                log.LogInformation($"VM Region Kill for region:  {regionToKill}: checking RG: {curRG.Name}");
+                log.LogInformation($"{myTargetType} Region Kill for region:  {regionToKill}: checking RG: {curRG.Name}");
                 List<IVirtualMachine> vmList = new List<IVirtualMachine>(myAz.VirtualMachines.ListByResourceGroup(curRG.Name));
                 foreach (IVirtualMachine curVM in vmList)
                 {
                     if (curVM.RegionName == regionToKill)
                     {
                         log.LogInformation($"RegionKill: Got a Region {regionToKill} match for {curVM.Id} - scheduling for termination");
-                        ScheduledOperation newOffOp = new ScheduledOperation(DateTime.Now, $"Killing Region {regionToKill} - VM Off", "vm", "off", curVM.Id);
+                        ScheduledOperation newOffOp = new ScheduledOperation(DateTime.Now, $"Killing Region {regionToKill} - {myTargetType} Off", myTargetType, "off", curVM.Id);
                         results.Add(newOffOp);
                     }
                 }

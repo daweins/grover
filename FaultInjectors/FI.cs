@@ -32,7 +32,7 @@ namespace AzureFaultInjector
 
         // Must be defined by subclass
         // TODO: Enforce this
-        protected string myTargetType = "Unknown";
+        static string myTargetType = "Unknown";
         protected Microsoft.Azure.Management.ResourceManager.Fluent.Core.IResource myResource = null;
 
 

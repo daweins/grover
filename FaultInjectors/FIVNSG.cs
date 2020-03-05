@@ -20,6 +20,8 @@ namespace AzureFaultInjector
     class FINSG : FI
     {
 
+        static string myTargetType = "NSG";
+
         static string myNewRuleNameIn = "FuzzerBlockingRuleIn";
         static string myNewRuleNameOut = "FuzzerBlockingRuleOut";
         static int myNewRulePriority = 100;
@@ -27,10 +29,15 @@ namespace AzureFaultInjector
 
         public FINSG (ILogger iLog, Microsoft.Azure.Management.Fluent.IAzure iAzure, string iTarget) : base(iLog,iAzure, iTarget)
         {
-            myResource = iAzure.NetworkSecurityGroups.GetById(iTarget);
-            
-            myTargetType = "NSG";
-        }
+            try
+            {
+                myResource = iAzure.NetworkSecurityGroups.GetById(iTarget);
+            }
+            catch(Exception err)
+            {
+                log.LogError($"Error in {myTargetType} constructor: {err.ToString()}");
+            }
+}
 
 
         protected override bool turnOn()
@@ -39,7 +46,7 @@ namespace AzureFaultInjector
 
             try
             {
-                log.LogInformation($"Removing new highest priority blocking rule to NSG {curNSG.Name}: In & Out");
+                log.LogInformation($"Removing new highest priority blocking rule to {myTargetType} {curNSG.Name}: In & Out");
 
 
                 curNSG.Update().WithoutRule(myNewRuleNameIn).Apply();
@@ -48,7 +55,7 @@ namespace AzureFaultInjector
             }
             catch (Exception err)
             {
-                log.LogError($"Error unblocking NSG {curSubName} -> {curTarget} -> {curNSG.Name}: {err}");
+                log.LogError($"Error unblocking {myTargetType} {curSubName} -> {curTarget} -> {curNSG.Name}: {err}");
                 return false;
             }
 
@@ -61,7 +68,7 @@ namespace AzureFaultInjector
             try
             {
                 // Add a blocking rule
-                log.LogInformation($"Adding new highest priority blocking rule to NSG {curNSG.Name}: Inbound");
+                log.LogInformation($"Adding new highest priority blocking rule to {myTargetType} {curNSG.Name}: Inbound");
                 curNSG.Update().DefineRule(myNewRuleNameIn)
                     .DenyInbound()
                     .FromAnyAddress()
@@ -73,7 +80,7 @@ namespace AzureFaultInjector
                     .WithPriority(100)
                     .Attach()
                     .Apply();
-                log.LogInformation($"Adding new highest priority blocking rule to NSG {curNSG.Name}: Outbound");
+                log.LogInformation($"Adding new highest priority blocking rule to {myTargetType} {curNSG.Name}: Outbound");
                 curNSG.Update().DefineRule(myNewRuleNameOut)
                     .DenyOutbound()
                     .FromAnyAddress()
@@ -86,7 +93,7 @@ namespace AzureFaultInjector
                     .Attach()
                     .Apply();
                 log.LogInformation($"Turned off NSG: {curNSG.Id}. Creating the compensating On action");
-                ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddMinutes(numMinutes), "Compensating On action for turning off a NSG", "nsg", "on", curTarget);
+                ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddMinutes(numMinutes), $"Compensating On action for turning off a {myTargetType}", myTargetType, "on", curTarget);
                 ScheduledOperationHelper.addSchedule(onOp, log);
 
                 return true;
@@ -111,18 +118,19 @@ namespace AzureFaultInjector
             else
             {
 
-                log.LogInformation("Adding a NSG sample schedule this iteration");
+                log.LogInformation($"Adding a {myTargetType} sample schedule this iteration");
 
                 // Pick a random RG from the list
                 int rgIndex = rnd.Next(rgList.Count);
                 List<INetworkSecurityGroup> NSGList = new List<INetworkSecurityGroup>(myAz.NetworkSecurityGroups.ListByResourceGroup(rgList[rgIndex].Name));
+                if (NSGList.Count > 0)
+                {
+                    // Pick a random NSG from the RG
+                    int NSGID = rnd.Next(NSGList.Count);
 
-                // Pick a random NSG from the RG
-                int NSGID = rnd.Next(NSGList.Count);
-
-                ScheduledOperation newOffOp = new ScheduledOperation(DateTime.Now, "Sample NSG Off", "nsg", "off", NSGList[NSGID].Id);
-                results.Add(newOffOp);
-
+                    ScheduledOperation newOffOp = new ScheduledOperation(DateTime.Now, $"Sample {myTargetType} Off", myTargetType, "off", NSGList[NSGID].Id);
+                    results.Add(newOffOp);
+                }
                 return results;
             }
         }
@@ -130,8 +138,8 @@ namespace AzureFaultInjector
         static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, int azToKill, ILogger log)
         {
             // Network doesn't AZ - return nothing
-            log.LogInformation("NSG: Killing AZ - return nothing as NSG doesn't have AZ");
-            List<ScheduledOperation> results = new List<ScheduledOperation>();
+            log.LogInformation($"{myTargetType}: Killing AZ - return nothing as {myTargetType} doesn't have AZ");
+            List <ScheduledOperation> results = new List<ScheduledOperation>();
             return results;
         }
 
@@ -140,14 +148,14 @@ namespace AzureFaultInjector
             List<ScheduledOperation> results = new List<ScheduledOperation>();
             foreach (IResourceGroup curRG in rgList)
             {
-                log.LogInformation($"NSG Region Kill for region:  {regionToKill}: checking RG: {curRG.Name}");
+                log.LogInformation($"{myTargetType} Region Kill for region:  {regionToKill}: checking RG: {curRG.Name}");
                 List<INetworkSecurityGroup> nsgList = new List<INetworkSecurityGroup>(myAz.NetworkSecurityGroups.ListByResourceGroup(curRG.Name));
                 foreach (INetworkSecurityGroup curNSG in nsgList)
                 {
                     if (curNSG.RegionName == regionToKill)
                     {
                         log.LogInformation($"Region Kill: Got a Region {regionToKill} match for {curNSG.Id} - scheduling for termination");
-                        ScheduledOperation newOffOp = new ScheduledOperation(DateTime.Now, $"Killing Region {regionToKill} - NSG Off", "nsg", "off", curNSG.Id);
+                        ScheduledOperation newOffOp = new ScheduledOperation(DateTime.Now, $"Killing Region {regionToKill} - {myTargetType} Off", myTargetType, "off", curNSG.Id);
                         results.Add(newOffOp);
                     }
                 }
