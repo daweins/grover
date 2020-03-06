@@ -18,6 +18,7 @@ We are looking for help in 2 primary areas:
 # Fault Injectors
 |Azure Component          |Single On|Single Off|AZ Failure|Regional Failure|Degraded Performance|Notes|
 |:------------------------|:-------:|:--------:|:--------:|:--------------:|:------------------:|:----|
+|AKS                      |         |          |          |                |                    | 
 |Azure Redis              |         |          |          |                |                    | 
 |Azure SQL                |   Yes   |  Yes     |  N/A     |                |                    |Triggers Geo-failover of DBs configured for this, then removes all Firewall rules to simulate failure. Restoration replaces the Firewall rules  
 |CosmosDB                 |         |          |          |                |                    | Degradation - alter the RUs? 
