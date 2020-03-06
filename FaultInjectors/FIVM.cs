@@ -41,7 +41,7 @@ namespace AzureFaultInjector
                 log.LogInformation($"Turning on {myTargetType}: {curVM.Id}");
                 curVM.StartAsync();
                 log.LogInformation($"Turning on {myTargetType} (async): {curVM.Id}");
-
+                myLogHelper.logEvent(myTargetType, curTarget, "on");
                 return true;
             }
             catch(Exception err)
@@ -64,6 +64,7 @@ namespace AzureFaultInjector
                     log.LogInformation($"Turning off VM (async): {curVM.Id}. Creating the compensating On action");
                     ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddMinutes(numMinutes), $"Compensating On action for turning off a {myTargetType}", myTargetType, "on", curTarget);
                     ScheduledOperationHelper.addSchedule(onOp, log);
+                    myLogHelper.logEvent(myTargetType, curTarget, "off");
 
                 }
                 else

@@ -51,6 +51,8 @@ namespace AzureFaultInjector
 
                 curNSG.Update().WithoutRule(myNewRuleNameIn).Apply();
                 curNSG.Update().WithoutRule(myNewRuleNameOut).Apply();
+                myLogHelper.logEvent(myTargetType, curTarget, "on");
+
                 return true;
             }
             catch (Exception err)
@@ -95,6 +97,7 @@ namespace AzureFaultInjector
                 log.LogInformation($"Turned off NSG: {curNSG.Id}. Creating the compensating On action");
                 ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddMinutes(numMinutes), $"Compensating On action for turning off a {myTargetType}", myTargetType, "on", curTarget);
                 ScheduledOperationHelper.addSchedule(onOp, log);
+                myLogHelper.logEvent(myTargetType, curTarget, "off");
 
                 return true;
             }

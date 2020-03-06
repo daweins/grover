@@ -66,6 +66,7 @@ namespace AzureFaultInjector
                     curSQL.EnableAccessFromAzureServices();
                 }
                 log.LogInformation($"Turned on SQL: {curSQL.Id}");
+                myLogHelper.logEvent(myTargetType, curTarget, "on");
 
                 return true;
             }
@@ -123,6 +124,7 @@ namespace AzureFaultInjector
                 string iPayload = rulesToPreserve.toJSON();
                 ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddMinutes(numMinutes), $"Compensating On action for turning off a {myTargetType}", myTargetType, "on", curTarget, iPayload);
                 ScheduledOperationHelper.addSchedule(onOp, log);
+                myLogHelper.logEvent(myTargetType, curTarget, "off");
 
                 return true;
             }

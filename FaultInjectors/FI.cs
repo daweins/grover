@@ -28,6 +28,7 @@ namespace AzureFaultInjector
         protected ILogger log;
         protected IKustoQueuedIngestClient ingestClient;
         protected KustoIngestionProperties ingestProps;
+        protected LogHelper myLogHelper;
 
 
         // Must be defined by subclass
@@ -59,6 +60,7 @@ namespace AzureFaultInjector
             curTarget = iTarget;
             log = iLog;
             curSubName = iAzure.SubscriptionId;
+            myLogHelper = new LogHelper(iLog);
 
             string ingestConn   = Environment.GetEnvironmentVariable("ingestConn");
             string ingestDB     = Environment.GetEnvironmentVariable("ingestDB");
@@ -92,6 +94,7 @@ namespace AzureFaultInjector
             }
             return false;
         }
+
 
        /* public async Task<bool> Fuzz(int pct)
         {

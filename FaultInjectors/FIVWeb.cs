@@ -40,6 +40,7 @@ namespace AzureFaultInjector
                 log.LogInformation($"Turning on Web: {curWeb.Id}");
                 curWeb.Start();
                 log.LogInformation($"Turned on Web: {curWeb.Id}");
+                myLogHelper.logEvent(myTargetType, curTarget, "on");
 
                 return true;
             }
@@ -63,6 +64,7 @@ namespace AzureFaultInjector
                     log.LogInformation($"Turned off Web: {curWeb.Id}. Creating the compensating On action");
                     ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddMinutes(numMinutes), $"Compensating On action for turning off a {myTargetType}", myTargetType, "on", curTarget);
                     ScheduledOperationHelper.addSchedule(onOp, log);
+                    myLogHelper.logEvent(myTargetType, curTarget, "off");
 
                 }
                 else
