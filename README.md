@@ -27,5 +27,5 @@ We are looking for help in the following primary areas:
 |Network                  |         |          |          |                |                    | Likely to use UDR - need to save existing UDR if in place 
 |Network Security Group   |   Yes   |  Yes     |  N/A     |     Yes        |                    | Temporarily places a high priority blocking inbound/outbound rule to simulate network failure
 |VM                       |   Yes   |  Yes     |  Yes     |     Yes        |                    | Todo - AvSet 
-|VMSS                     |         |          |          |                |                    | Manual scale to 0, and remember the original scale setting for restoration? 
+|VMSS                     |         |          |          | Can we iterate the VMs in the VMSS? |                    | Manual scale to 0, and remember the original scale setting for restoration? 
 |Web                      |   Yes   |  Yes     |  N/A     |     Yes        |                    |  
