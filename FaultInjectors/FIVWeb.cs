@@ -51,7 +51,7 @@ namespace AzureFaultInjector
             }
         }
 
-        protected override bool turnOff(int numMinutes = 5)
+        protected override bool turnOff(int numMinutes = 5, string iPayload = "")
         {
             Microsoft.Azure.Management.AppService.Fluent.IWebApp curWeb = (Microsoft.Azure.Management.AppService.Fluent.IWebApp)myResource;
 

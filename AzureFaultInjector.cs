@@ -71,7 +71,7 @@ namespace AzureFaultInjector
         static private void doQueuePopulate(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, ILogger log)
         {
             double nextAction = rnd.NextDouble();
-            nextAction = 0.75;
+            nextAction = .85;
             if (nextAction < 0.7)
             {
                 // Take a break
@@ -203,6 +203,10 @@ namespace AzureFaultInjector
                             case "sql":
                                 FISQL sqlFuzzer = new FISQL(log, myAz, curOp.target);
                                 opResult = sqlFuzzer.processOp(curOp.operation, curOp.payload);
+                                break;
+                            case "vmss":
+                                FIVMSS vmssFuzzer = new FIVMSS(log, myAz, curOp.target);
+                                opResult = vmssFuzzer.processOp(curOp.operation, curOp.payload);
                                 break;
                             default:
                                 log.LogError("Got an op we don't know how to handle!");

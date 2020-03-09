@@ -77,7 +77,7 @@ namespace AzureFaultInjector
             }
         }
 
-        protected override bool turnOff(int numMinutes = 5)
+        protected override bool turnOff(int numMinutes = 5, string iPayload = "")
         {
             Microsoft.Azure.Management.Sql.Fluent.ISqlServer curSQL = (Microsoft.Azure.Management.Sql.Fluent.ISqlServer)myResource;
 
@@ -121,8 +121,8 @@ namespace AzureFaultInjector
                 }
 
                 log.LogInformation($"Turned off SQL: {curSQL.Id}. Creating the compensating On action");
-                string iPayload = rulesToPreserve.toJSON();
-                ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddMinutes(numMinutes), $"Compensating On action for turning off a {myTargetType}", myTargetType, "on", curTarget, iPayload);
+                string onPayload = rulesToPreserve.toJSON();
+                ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddMinutes(numMinutes), $"Compensating On action for turning off a {myTargetType}", myTargetType, "on", curTarget, onPayload);
                 ScheduledOperationHelper.addSchedule(onOp, log);
                 myLogHelper.logEvent(myTargetType, curTarget, "off");
 

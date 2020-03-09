@@ -38,7 +38,7 @@ namespace AzureFaultInjector
 
 
         abstract protected bool turnOn(string payload);
-        abstract protected bool turnOff(int numMinutes);
+        abstract protected bool turnOff(int numMinutes, string payload);
 
         // This should be overridden by most implementations. C# doesn't have abstract statics, or I'd use that. 
         static public List<ScheduledOperation> getSampleSchedule(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, ILogger log)
@@ -86,7 +86,7 @@ namespace AzureFaultInjector
                     this.turnOn(payload);
                     return true;
                 case "off":
-                    this.turnOff(5);
+                    this.turnOff(5, payload);
                     return true;
                 default:
                     log.LogError($"Unknown op: {operation} for {this.ToString()}");
