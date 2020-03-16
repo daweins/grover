@@ -24,6 +24,7 @@ namespace AzureFaultInjector
         static Random rnd = new Random();
 
 
+
         [FunctionName("AzureFaultInjector")]
         public static void Run([TimerTrigger("0 * * * * *")]TimerInfo myTimer, ILogger log)
         {
@@ -70,6 +71,48 @@ namespace AzureFaultInjector
 
         static private void doQueuePopulate(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, ILogger log)
         {
+            //            doRandomQueuePopulate(myAz, rgList, log);
+
+            // Read the schedule list from CosmosDB
+            string cosmosConn = Environment.GetEnvironmentVariable("cosmosConn");
+            string cosmosDBName = Environment.GetEnvironmentVariable("cosmosDB");
+            string cosmosContainerTestScheduleName = Environment.GetEnvironmentVariable("cosmosContainerMasterSchedule");
+
+            // Get list of schedules to perform from cosmos
+            using (CosmosClient cosmosClient = new CosmosClient(cosmosConn))
+            {
+                Database curDB = cosmosClient.GetDatabase(cosmosDBName);
+                Container cosmosContainerTestSchedule = curDB.GetContainer(cosmosContainerTestScheduleName);
+
+                QueryDefinition query = new QueryDefinition(
+                    @"SELECT * 
+                      FROM c
+                      WHERE c.startTicks <= @filterTime and c.endTicks >= @filterTime and c.status = 'waiting' ")
+                    .WithParameter("@filterTime", DateTime.UtcNow.Ticks);
+
+                FeedIterator<TestSchedule> readyOps = cosmosContainerTestSchedule.GetItemQueryIterator<TestSchedule>(query);
+                while (readyOps.HasMoreResults)
+                {
+                    FeedResponse<TestSchedule> response = readyOps.ReadNextAsync().Result;
+
+
+                    foreach (TestSchedule curTestSchedule in response)
+                    {
+                        log.LogInformation($"Got Test Schedule to activate: {curTestSchedule.ToString()} ");
+                    }
+                }
+            }
+
+        }
+
+        // TODO: Get a list of schedules that are running and need to stop from cosmos
+        static private void doQueuePruning(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, ILogger log)
+        {
+
+        }
+        // Shouldn't be called - dead code
+        static private void doRandomQueuePopulate(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, ILogger log)
+        { 
             double nextAction = rnd.NextDouble();
             nextAction = .85;
             if (nextAction < 0.7)
@@ -164,20 +207,20 @@ namespace AzureFaultInjector
         {
             string cosmosConn = Environment.GetEnvironmentVariable("cosmosConn");
             string cosmosDBName = Environment.GetEnvironmentVariable("cosmosDB");
-            string cosmosScheduleContainerName = Environment.GetEnvironmentVariable("cosmosScheduleContainer");
+            string cosmosContainerScheduledOperationsName = Environment.GetEnvironmentVariable("cosmosContainerScheduledOperations");
 
             // Get list of ops to perform from cosmos
             using (CosmosClient cosmosClient = new CosmosClient(cosmosConn))
             {
                 Database curDB = cosmosClient.GetDatabase(cosmosDBName);
-                Container cosmosScheduleContainer = curDB.GetContainer(cosmosScheduleContainerName);
+                Container cosmosContainerScheduledOperations = curDB.GetContainer(cosmosContainerScheduledOperationsName);
                 
                 QueryDefinition query = new QueryDefinition(
                     @"SELECT * 
                       FROM c
                       WHERE c.scheduleTimeTicks < @filterTime ")
                     .WithParameter("@filterTime", DateTime.UtcNow.Ticks);
-                FeedIterator<ScheduledOperation> readyOps =   cosmosScheduleContainer.GetItemQueryIterator<ScheduledOperation>(query);
+                FeedIterator<ScheduledOperation> readyOps =   cosmosContainerScheduledOperations.GetItemQueryIterator<ScheduledOperation>(query);
                 while (readyOps.HasMoreResults)
                 {
                     FeedResponse<ScheduledOperation> response = readyOps.ReadNextAsync().Result;
@@ -217,7 +260,7 @@ namespace AzureFaultInjector
                             // Delete it so we don't redo it
                             try
                             {
-                                ItemResponse<ScheduledOperation> deleteResult = cosmosScheduleContainer.DeleteItemAsync<ScheduledOperation>(curOp.id, curOp.getPartitionKey()).Result;
+                                ItemResponse<ScheduledOperation> deleteResult = cosmosContainerScheduledOperations.DeleteItemAsync<ScheduledOperation>(curOp.id, curOp.getPartitionKey()).Result;
                                 log.LogInformation($"Completed op {curOp} - deleted from Cosmosb");
                             }
                             catch (Exception deleteOpErr)

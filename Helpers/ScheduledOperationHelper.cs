@@ -21,17 +21,17 @@ namespace AzureFaultInjector
 
             string cosmosConn = Environment.GetEnvironmentVariable("cosmosConn");
             string cosmosDBName = Environment.GetEnvironmentVariable("cosmosDB");
-            string cosmosScheduleContainerName = Environment.GetEnvironmentVariable("cosmosScheduleContainer");
+            string cosmosContainerScheduledOperationsName = Environment.GetEnvironmentVariable("cosmosContainerScheduledOperations");
 
             using (CosmosClient cosmosClient = new CosmosClient(cosmosConn))
             {
                 Database curDB = cosmosClient.GetDatabase(cosmosDBName);
-                Container cosmosScheduleContainer = curDB.GetContainer(cosmosScheduleContainerName);
+                Container cosmosContainerScheduledOperations = curDB.GetContainer(cosmosContainerScheduledOperationsName);
                 foreach (ScheduledOperation newOp in newOps)
                 {
                     try
                     {
-                        ItemResponse<ScheduledOperation> createOp = cosmosScheduleContainer.CreateItemAsync(newOp, newOp.getPartitionKey()).Result;
+                        ItemResponse<ScheduledOperation> createOp = cosmosContainerScheduledOperations.CreateItemAsync(newOp, newOp.getPartitionKey()).Result;
                         log.LogInformation($"Created Op: {newOp.ToString()}");
                     }
                     catch (Exception err)

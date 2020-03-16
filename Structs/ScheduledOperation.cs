@@ -36,12 +36,15 @@ namespace AzureFaultInjector
 
 
         [JsonProperty(PropertyName = "relatedOps")]
-        public List<string> relatedOps { get; set; }  
+        public List<string> relatedOps { get; set; }
+
+        public DateTime getStart()
+        {
+            return (new DateTime(startTicks));
+        }
 
 
-
-
-    public ScheduledOperation(DateTime iScheduleTime, string iDescription, string iTargetType, string iOperation,  string iTarget, string iPayload = "")
+        public ScheduledOperation(DateTime iScheduleTime, string iDescription, string iTargetType, string iOperation,  string iTarget, string iPayload = "")
         {
             scheduleTimeTicks = iScheduleTime.Ticks;
             targetType = iTargetType;

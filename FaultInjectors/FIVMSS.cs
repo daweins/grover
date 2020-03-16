@@ -21,17 +21,17 @@ namespace AzureFaultInjector
 
         static string myTargetType = "VMSS";
 
-        public FIVMSS (ILogger iLog, Microsoft.Azure.Management.Fluent.IAzure iAzure, string iTarget) : base(iLog,iAzure, iTarget)
+        public FIVMSS(ILogger iLog, Microsoft.Azure.Management.Fluent.IAzure iAzure, string iTarget) : base(iLog, iAzure, iTarget)
         {
             try
             {
                 myResource = iAzure.VirtualMachineScaleSets.GetById(iTarget);
             }
-            catch(Exception err)
+            catch (Exception err)
             {
                 log.LogError($"Error in {myTargetType} constructor: {err.ToString()}");
             }
-}
+        }
 
         protected override bool turnOn(string payload)
         {
