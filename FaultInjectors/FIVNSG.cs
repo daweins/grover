@@ -20,7 +20,7 @@ namespace AzureFaultInjector
     class FINSG : FI
     {
 
-        static string myTargetType = "NSG";
+        public static string myTargetType = "NSG";
 
         static string myNewRuleNameIn = "FuzzerBlockingRuleIn";
         static string myNewRuleNameOut = "FuzzerBlockingRuleOut";
@@ -63,7 +63,7 @@ namespace AzureFaultInjector
 
         }
 
-        protected override bool turnOff(int numMinutes = 5, string iPayload = "")
+        protected override bool turnOff(long durationTicks, string iPayload = "")
         {
             Microsoft.Azure.Management.Network.Fluent.INetworkSecurityGroup curNSG = (Microsoft.Azure.Management.Network.Fluent.INetworkSecurityGroup)myResource;
 
@@ -95,7 +95,7 @@ namespace AzureFaultInjector
                     .Attach()
                     .Apply();
                 log.LogInformation($"Turned off NSG: {curNSG.Id}. Creating the compensating On action");
-                ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddMinutes(numMinutes), $"Compensating On action for turning off a {myTargetType}", myTargetType, "on", curTarget);
+                ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddTicks(durationTicks), $"Compensating On action for turning off a {myTargetType}", myTargetType, "on", curTarget,0);
                 ScheduledOperationHelper.addSchedule(onOp, log);
                 myLogHelper.logEvent(myTargetType, curTarget, "off");
 
@@ -108,6 +108,7 @@ namespace AzureFaultInjector
             }
         }
 
+        /*
         static public  List<ScheduledOperation> getSampleSchedule(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, ILogger log)
         {
 
@@ -137,6 +138,7 @@ namespace AzureFaultInjector
                 return results;
             }
         }
+        */
 
         static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, int azToKill, ILogger log)
         {
@@ -146,7 +148,7 @@ namespace AzureFaultInjector
             return results;
         }
 
-        static public List<ScheduledOperation> killRegion(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string regionToKill, ILogger log)
+        static public List<ScheduledOperation> killRegion(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string regionToKill, long startTicks, long endTicks, ILogger log)
         {
             List<ScheduledOperation> results = new List<ScheduledOperation>();
             foreach (IResourceGroup curRG in rgList)
@@ -158,7 +160,7 @@ namespace AzureFaultInjector
                     if (curNSG.RegionName == regionToKill)
                     {
                         log.LogInformation($"Region Kill: Got a Region {regionToKill} match for {curNSG.Id} - scheduling for termination");
-                        ScheduledOperation newOffOp = new ScheduledOperation(DateTime.Now, $"Killing Region {regionToKill} - {myTargetType} Off", myTargetType, "off", curNSG.Id);
+                        ScheduledOperation newOffOp = new ScheduledOperation(new DateTime(startTicks), $"Killing Region {regionToKill} - {myTargetType} Off", myTargetType, "off", curNSG.Id, endTicks - startTicks);
                         results.Add(newOffOp);
                     }
                 }

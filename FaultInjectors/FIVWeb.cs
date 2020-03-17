@@ -18,7 +18,7 @@ namespace AzureFaultInjector
     class FIWeb : FI
     {
 
-        static string myTargetType = "Web";
+        public static string myTargetType = "Web";
         public FIWeb (ILogger iLog, Microsoft.Azure.Management.Fluent.IAzure iAzure, string iTarget) : base(iLog,iAzure, iTarget)
         {
             try
@@ -51,7 +51,7 @@ namespace AzureFaultInjector
             }
         }
 
-        protected override bool turnOff(int numMinutes = 5, string iPayload = "")
+        protected override bool turnOff(long durationTicks, string iPayload = "")
         {
             Microsoft.Azure.Management.AppService.Fluent.IWebApp curWeb = (Microsoft.Azure.Management.AppService.Fluent.IWebApp)myResource;
 
@@ -62,7 +62,7 @@ namespace AzureFaultInjector
                     log.LogInformation($"Turning off Web: {curWeb.Id}");
                     curWeb.StopAsync();   // We don't really care if this fails - worst case we turn it on when it's already on
                     log.LogInformation($"Turned off Web: {curWeb.Id}. Creating the compensating On action");
-                    ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddMinutes(numMinutes), $"Compensating On action for turning off a {myTargetType}", myTargetType, "on", curTarget);
+                    ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddTicks(durationTicks), $"Compensating On action for turning off a {myTargetType}", myTargetType, "on", curTarget,0);
                     ScheduledOperationHelper.addSchedule(onOp, log);
                     myLogHelper.logEvent(myTargetType, curTarget, "off");
 
@@ -81,7 +81,7 @@ namespace AzureFaultInjector
 
         }
 
-
+        /*
         static public List<ScheduledOperation> getSampleSchedule(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, ILogger log)
         {
             List<ScheduledOperation> results = new List<ScheduledOperation>();
@@ -110,8 +110,9 @@ namespace AzureFaultInjector
                 return results;
             }
         }
+        */
 
-        static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, int azToKill, ILogger log)
+        static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, int azToKill, long startTicks, long endTicks, ILogger log)
         {
 
             List<ScheduledOperation> results = new List<ScheduledOperation>();
@@ -122,7 +123,7 @@ namespace AzureFaultInjector
         }
 
 
-        static public List<ScheduledOperation> killRegion(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string regionToKill, ILogger log)
+        static public List<ScheduledOperation> killRegion(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string regionToKill, long startTicks, long endTicks, ILogger log)
         {
             List<ScheduledOperation> results = new List<ScheduledOperation>();
             foreach (IResourceGroup curRG in rgList)
@@ -134,7 +135,7 @@ namespace AzureFaultInjector
                     if (curWeb.RegionName == regionToKill)
                     {
                         log.LogInformation($"RegionKill: Got a Region {regionToKill} match for {curWeb.Id} - scheduling for termination");
-                        ScheduledOperation newOffOp = new ScheduledOperation(DateTime.Now, $"Killing Region {regionToKill} - {myTargetType} Off", myTargetType, "off", curWeb.Id);
+                        ScheduledOperation newOffOp = new ScheduledOperation(new DateTime(startTicks), $"Killing Region {regionToKill} - {myTargetType} Off", myTargetType, "off", curWeb.Id, endTicks-startTicks);
                         results.Add(newOffOp);
                     }
                 }

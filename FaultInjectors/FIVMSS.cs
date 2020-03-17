@@ -19,7 +19,7 @@ namespace AzureFaultInjector
     class FIVMSS : FI
     {
 
-        static string myTargetType = "VMSS";
+        public static string myTargetType = "VMSS";
 
         public FIVMSS(ILogger iLog, Microsoft.Azure.Management.Fluent.IAzure iAzure, string iTarget) : base(iLog, iAzure, iTarget)
         {
@@ -64,7 +64,7 @@ namespace AzureFaultInjector
             }
         }
 
-        protected override bool turnOff(int numMinutes = 5, string payload = "")
+        protected override bool turnOff(long durationTicks, string payload = "")
         {
             Microsoft.Azure.Management.Compute.Fluent.IVirtualMachineScaleSet curVMSS = (Microsoft.Azure.Management.Compute.Fluent.IVirtualMachineScaleSet)myResource;
 
@@ -80,7 +80,7 @@ namespace AzureFaultInjector
                         var curVM = curVMSS.VirtualMachines.GetInstance(payload);
                         curVM.PowerOffAsync();
                         log.LogInformation($"Turning off VMSS (async): {curVMSS.Id} Instance {curVM.Id}.  Creating the compensating On action");
-                        ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddMinutes(numMinutes), $"Compensating On action for turning off a {myTargetType}", myTargetType, "on", curTarget, curVM.InstanceId);
+                        ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddTicks(durationTicks), $"Compensating On action for turning off a {myTargetType}", myTargetType, "on", curTarget, 0,curVM.InstanceId);
                         ScheduledOperationHelper.addSchedule(onOp, log);
 
                     }
@@ -90,7 +90,7 @@ namespace AzureFaultInjector
                         log.LogInformation("Turning off entire VMSS");
                         curVMSS.PowerOffAsync();   // We don't really care if this fails - worst case we turn it on when it's already on
                         log.LogInformation($"Turning off VMSS (async): {curVMSS.Id}. Creating the compensating On action");
-                        ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddMinutes(numMinutes), $"Compensating On action for turning off a {myTargetType}", myTargetType, "on", curTarget);
+                        ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddTicks(durationTicks), $"Compensating On action for turning off a {myTargetType}", myTargetType, "on", curTarget,0);
                         ScheduledOperationHelper.addSchedule(onOp, log);
                         myLogHelper.logEvent(myTargetType, curTarget, "off");
                     }
@@ -109,7 +109,7 @@ namespace AzureFaultInjector
 
         }
 
-
+        /*
         static public List<ScheduledOperation> getSampleSchedule(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, ILogger log)
         {
             List<ScheduledOperation> results = new List<ScheduledOperation>();
@@ -138,8 +138,9 @@ namespace AzureFaultInjector
                 return results;
             }
         }
+        */
 
-        static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, int azToKill, ILogger log)
+        static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, int azToKill, long startTicks, long endTicks, ILogger log)
         {
             List<ScheduledOperation> results = new List<ScheduledOperation>();
             foreach (IResourceGroup curRG in rgList)
@@ -161,7 +162,7 @@ namespace AzureFaultInjector
                             {
                                 log.LogInformation($"AZKill: Got a Zone {azToKill} match for {curVM.Id} - scheduling for termination");
 
-                                ScheduledOperation newOffOp = new ScheduledOperation(DateTime.Now, $"Killing AZ {azToKill} - {myTargetType} VM Instance Off", myTargetType, "off", curVMSS.Id, curVM.InstanceId);
+                                ScheduledOperation newOffOp = new ScheduledOperation(new DateTime(startTicks), $"Killing AZ {azToKill} - {myTargetType} VM Instance Off", myTargetType, "off", curVMSS.Id, endTicks - startTicks, curVM.InstanceId);
                                 results.Add(newOffOp);
                             }
                         }
@@ -174,7 +175,7 @@ namespace AzureFaultInjector
             
 
             
-        static public List<ScheduledOperation> killRegion(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string regionToKill, ILogger log)
+        static public List<ScheduledOperation> killRegion(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string regionToKill, long startTicks, long endTicks, ILogger log)
         {
             List<ScheduledOperation> results = new List<ScheduledOperation>();
             foreach (IResourceGroup curRG in rgList)
@@ -186,7 +187,7 @@ namespace AzureFaultInjector
                     if (curVMSS.RegionName == regionToKill)
                     {
                         log.LogInformation($"RegionKill: Got a Region {regionToKill} match for {curVMSS.Id} - scheduling for termination");
-                        ScheduledOperation newOffOp = new ScheduledOperation(DateTime.Now, $"Killing Region {regionToKill} - {myTargetType} Off", myTargetType, "off", curVMSS.Id);
+                        ScheduledOperation newOffOp = new ScheduledOperation(new DateTime(startTicks), $"Killing Region {regionToKill} - {myTargetType} Off", myTargetType, "off", curVMSS.Id, endTicks - startTicks);
                         results.Add(newOffOp);
                     }
                 }

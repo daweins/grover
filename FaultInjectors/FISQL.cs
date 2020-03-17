@@ -25,7 +25,7 @@ namespace AzureFaultInjector
     class FISQL : FI
     {
 
-        static string myTargetType = "SQL";
+        public static string myTargetType = "SQL";
         public FISQL (ILogger iLog, Microsoft.Azure.Management.Fluent.IAzure iAzure, string iTarget) : base(iLog,iAzure, iTarget)
         {
             try
@@ -77,7 +77,7 @@ namespace AzureFaultInjector
             }
         }
 
-        protected override bool turnOff(int numMinutes = 5, string iPayload = "")
+        protected override bool turnOff(long durationTicks, string iPayload = "")
         {
             Microsoft.Azure.Management.Sql.Fluent.ISqlServer curSQL = (Microsoft.Azure.Management.Sql.Fluent.ISqlServer)myResource;
 
@@ -122,7 +122,7 @@ namespace AzureFaultInjector
 
                 log.LogInformation($"Turned off SQL: {curSQL.Id}. Creating the compensating On action");
                 string onPayload = rulesToPreserve.toJSON();
-                ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddMinutes(numMinutes), $"Compensating On action for turning off a {myTargetType}", myTargetType, "on", curTarget, onPayload);
+                ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddTicks(durationTicks), $"Compensating On action for turning off a {myTargetType}", myTargetType, "on", curTarget, 0, onPayload);
                 ScheduledOperationHelper.addSchedule(onOp, log);
                 myLogHelper.logEvent(myTargetType, curTarget, "off");
 
@@ -136,7 +136,7 @@ namespace AzureFaultInjector
 
         }
 
-
+        /*
         static public List<ScheduledOperation> getSampleSchedule(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, ILogger log)
         {
             List<ScheduledOperation> results = new List<ScheduledOperation>();
@@ -165,8 +165,9 @@ namespace AzureFaultInjector
                 return results;
             }
         }
+        */
 
-        static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, int azToKill, ILogger log)
+        static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, int azToKill, long startTicks, long endTicks, ILogger log)
         {
             List<ScheduledOperation> results = new List<ScheduledOperation>();
             log.LogInformation($"Sql AZKill for Zone {azToKill}: Nothing to do - SQL is zonally redundant");
@@ -176,7 +177,7 @@ namespace AzureFaultInjector
         }
 
 
-        static public List<ScheduledOperation> killRegion(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string regionToKill, ILogger log)
+        static public List<ScheduledOperation> killRegion(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string regionToKill, long startTicks, long endTicks, ILogger log)
         {
             List<ScheduledOperation> results = new List<ScheduledOperation>();
             foreach (IResourceGroup curRG in rgList)
@@ -188,7 +189,7 @@ namespace AzureFaultInjector
                     if (curSQL.RegionName == regionToKill)
                     {
                         log.LogInformation($"RegionKill: Got a Region {regionToKill} match for {curSQL.Id} - scheduling for termination");
-                        ScheduledOperation newOffOp = new ScheduledOperation(DateTime.Now, $"Killing Region {regionToKill} - {myTargetType} Off", myTargetType, "off", curSQL.Id);
+                        ScheduledOperation newOffOp = new ScheduledOperation(new DateTime(startTicks), $"Killing Region {regionToKill} - {myTargetType} Off", myTargetType, "off",  curSQL.Id, endTicks - startTicks);
                         results.Add(newOffOp);
                     }
                 }

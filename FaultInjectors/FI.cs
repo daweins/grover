@@ -33,12 +33,12 @@ namespace AzureFaultInjector
 
         // Must be defined by subclass
         // TODO: Enforce this
-        static string myTargetType = "Unknown";
+        public  static string myTargetType = "Unknown";
         protected Microsoft.Azure.Management.ResourceManager.Fluent.Core.IResource myResource = null;
 
 
         abstract protected bool turnOn(string payload);
-        abstract protected bool turnOff(int numMinutes, string payload);
+        abstract protected bool turnOff(long durationTicks, string payload);
 
         // This should be overridden by most implementations. C# doesn't have abstract statics, or I'd use that. 
         static public List<ScheduledOperation> getSampleSchedule(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, ILogger log)
@@ -46,11 +46,11 @@ namespace AzureFaultInjector
             return new List<ScheduledOperation>();
         }
         // This should be overridden by most implementations. C# doesn't have abstract statics, or I'd use that. 
-        static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, int azToKill, ILogger log)
+        static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, int azToKill, long startTicks, long endTicks, ILogger log)
         {
             return new List<ScheduledOperation>();
         }
-        static public List<ScheduledOperation> killRegion(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string regionToKill, ILogger log)
+        static public List<ScheduledOperation> killRegion(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string regionToKill, long startTicks, long endTicks, ILogger log)
         {
             return new List<ScheduledOperation>();
         }
@@ -71,11 +71,7 @@ namespace AzureFaultInjector
             ingestProps.Format = Kusto.Data.Common.DataSourceFormat.csv;
         }
 
-        // Used to allow for easy "plugin" extension
-        static public IEnumerable<Type> getSubTypes()
-        {            
-                return Assembly.GetExecutingAssembly().GetTypes().Where(t => typeof(FI).IsAssignableFrom(t));
-        }
+        
 
 
         public bool processOp(string operation, string payload)
@@ -96,62 +92,83 @@ namespace AzureFaultInjector
         }
 
 
-       /* public async Task<bool> Fuzz(int pct)
+        // Used to allow for easy "plugin" extension
+        static public IEnumerable<Type> getSubTypes()
         {
-            try
-            {
-                log.LogInformation($"{myTargetType} Fuzzer run against {curSubName} -> {curRGName} start");
-
-                using (var memStream = new MemoryStream())
-                {
-                    using (var sr = new StreamWriter(memStream))
-                    {
-                        bool hasWrites = false;
-
-                        
-                        foreach (Microsoft.Azure.Management.ResourceManager.Fluent.Core.IResource curResource in myResourceCollection)
-                        {
-                            int nextRnd = rnd.Next(100);
-                            log.LogInformation($"Got {myTargetType}: {curResource.Name}. Will reboot if {nextRnd} is <= {pct}");
-                            if (nextRnd <= pct)
-                            {
-                                hasWrites = true;
-                                log.LogInformation($"Turning off {myTargetType} for 3 minutes: {curResource.Name}");
-                                sr.WriteLine($"{DateTime.UtcNow.ToString()}, {curSubName},{curRGName},{curResource.Name},{myTargetType+"FaultInjection"},{1}");
-                                bool result = turnOff(curResource);
-                                log.LogInformation($"Turn Off Result: {result}");
-                                // Sleep for a minimum of 3 minutes - an implementor can wait longer if they choose to add
-                                log.LogInformation($"Sleeping...");
-                                Thread.Sleep(TimeSpan.FromMinutes(3));
-                                log.LogInformation($"Turning on {myTargetType}: {curResource.Name}");
-                                sr.WriteLine($"{DateTime.UtcNow.ToString()}, {curSubName},{curRGName},{curResource.Name},{myTargetType + "FaultInjection"},{0}");
-                                result = turnOn(curResource);
-                                log.LogInformation($"Turn On Result: {result}");
-                            }
-                        }
-
-
-                        if (hasWrites)
-                        {
-                            sr.Flush();
-                            memStream.Seek(0, SeekOrigin.Begin);
-                            ingestClient.IngestFromStream(memStream, ingestProps);
-                        }
-                    }
-                }
-                log.LogInformation($"VM Fuzzer run against {curSubName} -> {curRGName} complete");
-                return true;
-            }
-            catch (Exception err)
-            {
-                log.LogError($"Error in VM Fuzzer: {err}");
-                return false;
-            }
+            return Assembly.GetExecutingAssembly().GetTypes().Where(t => typeof(FI).IsAssignableFrom(t));
         }
-        */
+
+        static public Type getFIType(string targetType)
+        {
+            foreach (Type curFI in FI.getSubTypes())
+            {
+                string curTargetType = (string)curFI.GetField("myTargetType", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public).GetValue(null);
+                if (curTargetType == targetType)
+                {
+                    return (curFI);
+                }
+            }
+            return null;
+        }
 
 
-    }
+
+            /* public async Task<bool> Fuzz(int pct)
+             {
+                 try
+                 {
+                     log.LogInformation($"{myTargetType} Fuzzer run against {curSubName} -> {curRGName} start");
+
+                     using (var memStream = new MemoryStream())
+                     {
+                         using (var sr = new StreamWriter(memStream))
+                         {
+                             bool hasWrites = false;
+
+
+                             foreach (Microsoft.Azure.Management.ResourceManager.Fluent.Core.IResource curResource in myResourceCollection)
+                             {
+                                 int nextRnd = rnd.Next(100);
+                                 log.LogInformation($"Got {myTargetType}: {curResource.Name}. Will reboot if {nextRnd} is <= {pct}");
+                                 if (nextRnd <= pct)
+                                 {
+                                     hasWrites = true;
+                                     log.LogInformation($"Turning off {myTargetType} for 3 minutes: {curResource.Name}");
+                                     sr.WriteLine($"{DateTime.UtcNow.ToString()}, {curSubName},{curRGName},{curResource.Name},{myTargetType+"FaultInjection"},{1}");
+                                     bool result = turnOff(curResource);
+                                     log.LogInformation($"Turn Off Result: {result}");
+                                     // Sleep for a minimum of 3 minutes - an implementor can wait longer if they choose to add
+                                     log.LogInformation($"Sleeping...");
+                                     Thread.Sleep(TimeSpan.FromMinutes(3));
+                                     log.LogInformation($"Turning on {myTargetType}: {curResource.Name}");
+                                     sr.WriteLine($"{DateTime.UtcNow.ToString()}, {curSubName},{curRGName},{curResource.Name},{myTargetType + "FaultInjection"},{0}");
+                                     result = turnOn(curResource);
+                                     log.LogInformation($"Turn On Result: {result}");
+                                 }
+                             }
+
+
+                             if (hasWrites)
+                             {
+                                 sr.Flush();
+                                 memStream.Seek(0, SeekOrigin.Begin);
+                                 ingestClient.IngestFromStream(memStream, ingestProps);
+                             }
+                         }
+                     }
+                     log.LogInformation($"VM Fuzzer run against {curSubName} -> {curRGName} complete");
+                     return true;
+                 }
+                 catch (Exception err)
+                 {
+                     log.LogError($"Error in VM Fuzzer: {err}");
+                     return false;
+                 }
+             }
+             */
+
+
+        }
 
 
 

@@ -38,13 +38,18 @@ namespace AzureFaultInjector
         [JsonProperty(PropertyName = "relatedOps")]
         public List<string> relatedOps { get; set; }
 
+
+        [JsonProperty(PropertyName = "durationTicks")]
+        public long durationTicks { get; set; }
+
+
         public DateTime getStart()
         {
-            return (new DateTime(startTicks));
+            return (new DateTime(scheduleTimeTicks));
         }
 
 
-        public ScheduledOperation(DateTime iScheduleTime, string iDescription, string iTargetType, string iOperation,  string iTarget, string iPayload = "")
+        public ScheduledOperation(DateTime iScheduleTime, string iDescription, string iTargetType, string iOperation,  string iTarget, long iDurationTicks, string iPayload = "")
         {
             scheduleTimeTicks = iScheduleTime.Ticks;
             targetType = iTargetType;
@@ -54,6 +59,7 @@ namespace AzureFaultInjector
             payload = iPayload;
             id = Guid.NewGuid().ToString();
             relatedOps = new List<string>();
+            durationTicks = iDurationTicks;
         }
 
         public PartitionKey getPartitionKey()
@@ -64,7 +70,7 @@ namespace AzureFaultInjector
 
         override public string ToString()
         {
-            return $"ScheduledOperation: id={id}; scheduleTime: { new DateTime(scheduleTimeTicks).ToString()}; targetType: { targetType};opType: {operation}; target: {target}; description: {description} ";
+            return $"ScheduledOperation: id={id}; scheduleTime: { getStart()}; targetType: { targetType};opType: {operation}; target: {target}; description: {description} ";
 
         }
         static void createLink(ScheduledOperation a, ScheduledOperation b)

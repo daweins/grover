@@ -39,7 +39,7 @@ namespace AzureFaultInjector
                 int vmFuzzPct = Convert.ToInt32(Environment.GetEnvironmentVariable("vmFuzzPct"));
                 int nsgFuzzPct = Convert.ToInt32(Environment.GetEnvironmentVariable("nsgFuzzPct"));
                 string rgFilterTag = Environment.GetEnvironmentVariable("rgFilterTag");
-                
+
 
                 ServicePrincipalLoginInformation spi = new ServicePrincipalLoginInformation
                 {
@@ -54,11 +54,11 @@ namespace AzureFaultInjector
                 // Centralize the filtering of target RGs for fault injection
                 List<IResourceGroup> rgList = new List<IResourceGroup>(myAz.ResourceGroups.ListByTag(rgFilterTag, "true"));
                 log.LogInformation($"Finding ResourceGroups in subscription {subId} with Tag {rgFilterTag} with a value of true");
-                    
+
                 doQueuePopulate(myAz, rgList, log);
                 doQueueProcess(myAz, log);
 
-                
+
 
                 log.LogInformation($"Fault Injector finished at: {DateTime.Now}");
 
@@ -90,19 +90,131 @@ namespace AzureFaultInjector
                       WHERE c.startTicks <= @filterTime and c.endTicks >= @filterTime and c.status = 'waiting' ")
                     .WithParameter("@filterTime", DateTime.UtcNow.Ticks);
 
-                FeedIterator<TestSchedule> readyOps = cosmosContainerTestSchedule.GetItemQueryIterator<TestSchedule>(query);
-                while (readyOps.HasMoreResults)
+                FeedIterator<TestSchedule> readyTests = cosmosContainerTestSchedule.GetItemQueryIterator<TestSchedule>(query);
+                while (readyTests.HasMoreResults)
                 {
-                    FeedResponse<TestSchedule> response = readyOps.ReadNextAsync().Result;
+                    FeedResponse<TestSchedule> response = readyTests.ReadNextAsync().Result;
 
 
                     foreach (TestSchedule curTestSchedule in response)
                     {
                         log.LogInformation($"Got Test Schedule to activate: {curTestSchedule.ToString()} ");
+                        processTestSchedule(curTestSchedule, myAz, rgList, log);
                     }
                 }
             }
 
+        }
+
+        static private void processTestSchedule(TestSchedule curTestSchedule, Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, ILogger log)
+        {
+            // Get the test definition from Cosmos
+            string cosmosConn = Environment.GetEnvironmentVariable("cosmosConn");
+            string cosmosDBName = Environment.GetEnvironmentVariable("cosmosDB");
+            string cosmosContainerTestDefinitionName = Environment.GetEnvironmentVariable("cosmosContainerTestDefinitions");
+
+            // Get list of schedules to perform from cosmos
+            using (CosmosClient cosmosClient = new CosmosClient(cosmosConn))
+            {
+                Database curDB = cosmosClient.GetDatabase(cosmosDBName);
+                Container cosmosContainerTestDefinition = curDB.GetContainer(cosmosContainerTestDefinitionName);
+
+                QueryDefinition query = new QueryDefinition(
+                    @"SELECT * 
+                      FROM c
+                      WHERE c.testDefName = @curTest ")
+                    .WithParameter("@curTest", curTestSchedule.testDef);
+
+                FeedIterator<TestDefinition> curTestDefs = cosmosContainerTestDefinition.GetItemQueryIterator<TestDefinition>(query);
+                while (curTestDefs.HasMoreResults)
+                {
+                    FeedResponse<TestDefinition> response = curTestDefs.ReadNextAsync().Result;
+                    foreach (TestDefinition curTestDef in response)
+                    {
+                        log.LogInformation($"Got Test Definition to parse: {curTestDef.ToString()}");
+                        long startTicks = curTestSchedule.startTicks;
+                        long endTicks = startTicks;
+                        foreach (TestDefinitionAction curAction in curTestDef.actionList)
+                        {
+                            startTicks = endTicks; // Move to the next timespan
+                            endTicks = startTicks + TimeSpan.FromMinutes(curAction.durationMinutes).Ticks;
+                            List<string> actionFIList = new List<string>();
+                            List<string> regionList = new List<string>();
+                            // Figure out the FI Type population
+                            foreach (TestDefinitionFIType targetFI in curAction.fiTypes)
+                            {
+                                string targetFIName = targetFI.fi;
+
+                                // TODO: A lot of this nasty reflection should be moved to FI.cs
+                                foreach (Type curFI in FI.getSubTypes())
+                                {
+                                    string curTargetType = (string)curFI.GetField("myTargetType", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public).GetValue(null);
+                                    if (curTargetType != "Unknown")
+                                    {
+                                        if (targetFIName == "*" || targetFIName == curTargetType)
+                                        {
+                                            actionFIList.Add(curTargetType);
+                                        }
+                                    }
+                                }
+
+                            }
+
+                            // Figure out the region population
+                            // Build the total region population
+                            HashSet<string> regionPopulation = new HashSet<string>();
+                            foreach (IResourceGroup curRG in rgList)
+                            {
+                                regionPopulation.Add(curRG.RegionName);
+                            }
+                            List<string> actionRegionList = new List<string>();
+                            foreach (TestDefinitionRegionFailureDefinition targetRegion in curAction.regionFailureList)
+                            {
+                                if (targetRegion.region == "*")
+                                {
+                                    // Add all regions
+                                    actionRegionList.AddRange(regionPopulation);
+                                }
+                                else if (targetRegion.region == "?")
+                                {
+                                    // Pick a region at random
+                                    int curRegionIndexToTarget = rnd.Next(regionPopulation.Count);
+                                    actionRegionList.Add(regionPopulation.ElementAt<string>(curRegionIndexToTarget));
+                                }
+                                else
+                                {
+                                    foreach (string checkRegion in regionPopulation)
+                                    {
+                                        if (checkRegion == targetRegion.region)
+                                        {
+                                            actionRegionList.Add(checkRegion);
+                                        }
+                                    }
+                                }
+
+                            }
+
+                            // TODO: Figure out the AZ population 
+
+                            log.LogInformation($"Parsing Action {curAction.label} from test {curTestDef.testDefName} from Ticks {startTicks} ({new DateTime(startTicks).ToString()}) to {endTicks} ({new DateTime(endTicks).ToString()}). Found {actionRegionList.Count} regions and {actionFIList.Count} Fault Injector Types to target");
+                            // Now create schedules
+
+                            List<ScheduledOperation> opsToAdd = new List<ScheduledOperation>();
+                            foreach (string curFIName in actionFIList)
+                            {
+                                Type curFIType = FI.getFIType(curFIName);
+                                foreach (string curRegionToKill in actionRegionList)
+                                {
+                                    List<ScheduledOperation> newOps = (List<ScheduledOperation>)curFIType.GetMethod("killRegion").Invoke(null, new object[] { myAz, rgList, curRegionToKill,startTicks,endTicks, log });
+                                    opsToAdd.AddRange(newOps);
+                                }
+                            }
+                            ScheduledOperationHelper.addSchedule(opsToAdd, log);
+                        }
+                    }
+                    // Update the schedule status to processing
+                }
+            }
         }
 
         // TODO: Get a list of schedules that are running and need to stop from cosmos
@@ -112,7 +224,7 @@ namespace AzureFaultInjector
         }
         // Shouldn't be called - dead code
         static private void doRandomQueuePopulate(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, ILogger log)
-        { 
+        {
             double nextAction = rnd.NextDouble();
             nextAction = .85;
             if (nextAction < 0.7)
@@ -173,7 +285,7 @@ namespace AzureFaultInjector
                 // Trigger a regional outage
                 // Find a list of interesting regions - use the RGList as a starter
                 HashSet<string> regionList = new HashSet<string>();
-                foreach(IResourceGroup curRG in rgList)
+                foreach (IResourceGroup curRG in rgList)
                 {
                     regionList.Add(curRG.RegionName);
                 }
@@ -202,6 +314,7 @@ namespace AzureFaultInjector
             }
 
         }
+    
 
         static private void doQueueProcess(Microsoft.Azure.Management.Fluent.IAzure myAz, ILogger log)
         {
