@@ -55,6 +55,7 @@ namespace AzureFaultInjector
                 List<IResourceGroup> rgList = new List<IResourceGroup>(myAz.ResourceGroups.ListByTag(rgFilterTag, "true"));
                 log.LogInformation($"Finding ResourceGroups in subscription {subId} with Tag {rgFilterTag} with a value of true");
 
+                doQueuePruning(myAz, rgList, log);
                 doQueuePopulate(myAz, rgList, log);
                 doQueueProcess(myAz, log);
 
@@ -100,6 +101,15 @@ namespace AzureFaultInjector
                     {
                         log.LogInformation($"Got Test Schedule to activate: {curTestSchedule.ToString()} ");
                         processTestSchedule(curTestSchedule, myAz, rgList, log);
+                       
+                        // Update the schedule status to processing
+                        // Can't upsert on status change as the status is the partition key, so delete + add
+                        cosmosContainerTestSchedule.DeleteItemAsync<TestSchedule>(curTestSchedule.id, curTestSchedule.getPartitionKey());
+                        curTestSchedule.status = "running";
+                        ItemResponse<TestSchedule> updateSheduleResults =  cosmosContainerTestSchedule.UpsertItemAsync<TestSchedule>(curTestSchedule, curTestSchedule.getPartitionKey()).Result;
+                        log.LogInformation($"Marked schedule {curTestSchedule.id} as Running");
+
+
                     }
                 }
             }
@@ -160,40 +170,43 @@ namespace AzureFaultInjector
 
                             }
 
-                            // Figure out the region population
-                            // Build the total region population
-                            HashSet<string> regionPopulation = new HashSet<string>();
-                            foreach (IResourceGroup curRG in rgList)
-                            {
-                                regionPopulation.Add(curRG.RegionName);
-                            }
+                            // Handle region actions
                             List<string> actionRegionList = new List<string>();
-                            foreach (TestDefinitionRegionFailureDefinition targetRegion in curAction.regionFailureList)
+                            if (curAction.regionFailureList != null && curAction.regionFailureList.Count > 0)
                             {
-                                if (targetRegion.region == "*")
+                                // Figure out the region population
+                                // Build the total region population
+                                HashSet<string> regionPopulation = new HashSet<string>();
+                                foreach (IResourceGroup curRG in rgList)
                                 {
-                                    // Add all regions
-                                    actionRegionList.AddRange(regionPopulation);
+                                    regionPopulation.Add(curRG.RegionName);
                                 }
-                                else if (targetRegion.region == "?")
+                                foreach (TestDefinitionRegionFailureDefinition targetRegion in curAction.regionFailureList)
                                 {
-                                    // Pick a region at random
-                                    int curRegionIndexToTarget = rnd.Next(regionPopulation.Count);
-                                    actionRegionList.Add(regionPopulation.ElementAt<string>(curRegionIndexToTarget));
-                                }
-                                else
-                                {
-                                    foreach (string checkRegion in regionPopulation)
+                                    if (targetRegion.region == "*")
                                     {
-                                        if (checkRegion == targetRegion.region)
+                                        // Add all regions
+                                        actionRegionList.AddRange(regionPopulation);
+                                    }
+                                    else if (targetRegion.region == "?")
+                                    {
+                                        // Pick a region at random
+                                        int curRegionIndexToTarget = rnd.Next(regionPopulation.Count);
+                                        actionRegionList.Add(regionPopulation.ElementAt<string>(curRegionIndexToTarget));
+                                    }
+                                    else
+                                    {
+                                        foreach (string checkRegion in regionPopulation)
                                         {
-                                            actionRegionList.Add(checkRegion);
+                                            if (checkRegion == targetRegion.region)
+                                            {
+                                                actionRegionList.Add(checkRegion);
+                                            }
                                         }
                                     }
+
                                 }
-
                             }
-
                             // TODO: Figure out the AZ population 
 
                             log.LogInformation($"Parsing Action {curAction.label} from test {curTestDef.testDefName} from Ticks {startTicks} ({new DateTime(startTicks).ToString()}) to {endTicks} ({new DateTime(endTicks).ToString()}). Found {actionRegionList.Count} regions and {actionFIList.Count} Fault Injector Types to target");
@@ -212,7 +225,7 @@ namespace AzureFaultInjector
                             ScheduledOperationHelper.addSchedule(opsToAdd, log);
                         }
                     }
-                    // Update the schedule status to processing
+
                 }
             }
         }
@@ -220,8 +233,35 @@ namespace AzureFaultInjector
         // TODO: Get a list of schedules that are running and need to stop from cosmos
         static private void doQueuePruning(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, ILogger log)
         {
+            // First - clear all Ops that aren't compensating transactions
+            string cosmosConn = Environment.GetEnvironmentVariable("cosmosConn");
+            string cosmosDBName = Environment.GetEnvironmentVariable("cosmosDB");
+            string cosmosContainerScheduledOperationsName = Environment.GetEnvironmentVariable("cosmosContainerScheduledOperations");
+
+            using (CosmosClient cosmosClient = new CosmosClient(cosmosConn))
+            {
+                Database curDB = cosmosClient.GetDatabase(cosmosDBName);
+                Container cosmosContainerScheduledOperations = curDB.GetContainer(cosmosContainerScheduledOperationsName);
+                
+                QueryDefinition query = new QueryDefinition(
+                    @"SELECT *
+                      FROM c
+                      WHERE c.durationTicks > 0 ");
+                FeedIterator<ScheduledOperation> readyOps = cosmosContainerScheduledOperations.GetItemQueryIterator<ScheduledOperation>(query);
+                while (readyOps.HasMoreResults)
+                {
+                    FeedResponse<ScheduledOperation> response = readyOps.ReadNextAsync().Result;
+                    foreach (ScheduledOperation curOp in response)
+                    {
+                        cosmosContainerScheduledOperations.DeleteItemAsync<ScheduledOperation>(curOp.id, curOp.getPartitionKey());
+                    }
+                }
+            }
 
         }
+
+
+
         // Shouldn't be called - dead code
         static private void doRandomQueuePopulate(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, ILogger log)
         {
