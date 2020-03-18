@@ -41,24 +41,6 @@ resource "azurerm_app_service" "as" {
   connection_string {
     name  = "Database"
     type  = "SQLServer"
-    value = "Server=some-server.mydomain.com;Integrated Security=SSPI"
-  }
-}
-
-resource "azurerm_app_service_slot" "prod" {
-  name                = "${random_id.server.hex}-prod"
-  app_service_name    = "${azurerm_app_service.as.name}"
-  location            = var.location
-  resource_group_name = "${azurerm_resource_group.paas-rg.name}"
-  app_service_plan_id = "${azurerm_app_service_plan.asp.id}"
-
-  site_config {
-    dotnet_framework_version = "v4.0"
-  }
-
-  connection_string {
-    name  = "Database"
-    type  = "SQLServer"
     value = "Server=tcp:${azurerm_sql_server.sqlserver.name}.database.usgovcloudapi.net,1433;Initial Catalog=${azurerm_sql_database.prodsqldatabase.name};Persist Security Info=False;User ID=${azurerm_sql_server.sqlserver.administrator_login};Password=${azurerm_sql_server.sqlserver.administrator_login_password};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
   }
 }
@@ -112,6 +94,13 @@ resource "azurerm_sql_server" "sqlserver" {
 
 resource "azurerm_sql_database" "devsqldatabase" {
   name                = "devsqlserver"
+  resource_group_name = "${azurerm_resource_group.paas-rg.name}"
+  location            = var.location
+  server_name         = "${azurerm_sql_server.sqlserver.name}"
+}
+
+resource "azurerm_sql_database" "prodsqldatabase" {
+  name                = "prodsqlserver"
   resource_group_name = "${azurerm_resource_group.paas-rg.name}"
   location            = var.location
   server_name         = "${azurerm_sql_server.sqlserver.name}"
