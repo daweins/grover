@@ -21,7 +21,7 @@ resource "azurerm_sql_server" "sqlserver" {
 }
 
 resource "azurerm_sql_database" "devsqldatabase" {
-  name                = "devsqlserver"
+  name                = "sqlserver"
   resource_group_name = var.resource_group_name
   location            = var.location
   server_name         = "${azurerm_sql_server.sqlserver.name}"
@@ -34,6 +34,18 @@ resource "azurerm_sql_database" "prodsqldatabase" {
   server_name         = "${azurerm_sql_server.sqlserver.name}"
 }
 
-output "DatabasePasswordOutput" {
+output "DatabasePassword" {
     value = "${random_string.DatabasePassword.*.result}"
+}
+
+output "DatabaseServerName" {
+    value = azurerm_sql_server.sqlserver.name
+}
+
+output "DatabaseName" {
+  value = azurerm_sql_database.devsqldatabase.name
+}
+
+output "DatabaseUserName" {
+  value = azurerm_sql_server.sqlserver.administrator_login
 }
