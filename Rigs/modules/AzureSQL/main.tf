@@ -31,11 +31,11 @@ resource "azurerm_sql_database" "prodsqldatabase" {
   name                = "prodsqlserver"
   resource_group_name = var.resource_group_name
   location            = var.location
-  server_name         = "${azurerm_sql_server.sqlserver.name}"
+  server_name         = azurerm_sql_server.sqlserver.name
 }
 
 output "DatabasePassword" {
-    value = "${random_string.DatabasePassword.*.result}"
+    value = random_string.DatabasePassword.*.result
 }
 
 output "DatabaseServerName" {
