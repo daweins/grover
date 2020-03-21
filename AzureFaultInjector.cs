@@ -105,9 +105,9 @@ namespace AzureFaultInjector
                         // Update the schedule status to processing
                         // Can't upsert on status change as the status is the partition key, so delete + add
                         cosmosContainerTestSchedule.DeleteItemAsync<TestSchedule>(curTestSchedule.id, curTestSchedule.getPartitionKey());
-                        curTestSchedule.status = "running";
+                        curTestSchedule.status = "processed";
                         ItemResponse<TestSchedule> updateSheduleResults =  cosmosContainerTestSchedule.UpsertItemAsync<TestSchedule>(curTestSchedule, curTestSchedule.getPartitionKey()).Result;
-                        log.LogInformation($"Marked schedule {curTestSchedule.id} as Running");
+                        log.LogInformation($"Marked schedule {curTestSchedule.id} as processed");
 
 
                     }
@@ -142,7 +142,7 @@ namespace AzureFaultInjector
                     foreach (TestDefinition curTestDef in response)
                     {
                         log.LogInformation($"Got Test Definition to parse: {curTestDef.ToString()}");
-                        long startTicks = curTestSchedule.startTicks;
+                        long startTicks = Math.Max(curTestSchedule.startTicks, DateTime.Now.Ticks); // Start either when scheduled, or now
                         long endTicks = startTicks;
                         foreach (TestDefinitionAction curAction in curTestDef.actionList)
                         {
@@ -246,7 +246,7 @@ namespace AzureFaultInjector
                 QueryDefinition query = new QueryDefinition(
                     @"SELECT *
                       FROM c
-                      WHERE c.durationTicks > 0 ");
+                      WHERE c.durationTicks > 0 and c.scheduleTimeTicks < @curTicks").WithParameter("@curTicks",DateTime.Now.Ticks);
                 FeedIterator<ScheduledOperation> readyOps = cosmosContainerScheduledOperations.GetItemQueryIterator<ScheduledOperation>(query);
                 while (readyOps.HasMoreResults)
                 {
@@ -258,10 +258,35 @@ namespace AzureFaultInjector
                 }
             }
 
+            // Clear all schedules that should be over 
+            string cosmosContainerMasterSchedulersName = Environment.GetEnvironmentVariable("cosmosContainerMasterSchedule");
+
+            using (CosmosClient cosmosClient = new CosmosClient(cosmosConn))
+            {
+                Database curDB = cosmosClient.GetDatabase(cosmosDBName);
+                Container cosmosContainerMasterScheduler= curDB.GetContainer(cosmosContainerMasterSchedulersName);
+
+                QueryDefinition query = new QueryDefinition(
+                    @"SELECT *
+                      FROM c
+                      WHERE c.endTicks <  @curTicks ").WithParameter("@curTicks", DateTime.Now.Ticks);
+                FeedIterator<TestSchedule> readySchedules = cosmosContainerMasterScheduler.GetItemQueryIterator<TestSchedule>(query);
+                while (readySchedules.HasMoreResults)
+                {
+                    FeedResponse<TestSchedule> response = readySchedules.ReadNextAsync().Result;
+                    foreach (TestSchedule curSched in response)
+                    {
+                        cosmosContainerMasterScheduler.DeleteItemAsync<TestSchedule>(curSched.id, curSched.getPartitionKey());
+                        curSched.status = "expired";
+                        cosmosContainerMasterScheduler.CreateItemAsync(curSched);
+                    }
+                }
+            }
+
         }
 
 
-
+        /*
         // Shouldn't be called - dead code
         static private void doRandomQueuePopulate(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, ILogger log)
         {
@@ -354,7 +379,7 @@ namespace AzureFaultInjector
             }
 
         }
-    
+    */
 
         static private void doQueueProcess(Microsoft.Azure.Management.Fluent.IAzure myAz, ILogger log)
         {
