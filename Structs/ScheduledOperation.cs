@@ -12,6 +12,16 @@ namespace AzureFaultInjector
         [JsonProperty(PropertyName = "scheduleTimeTicks")]
         public long scheduleTimeTicks { get; set; }
 
+        [JsonProperty(PropertyName = "scheduleTimeReadOnly")]
+        public string scheduleTimeReadOnly { get {
+                return new DateTime(scheduleTimeTicks).ToString();
+            }
+            set
+            {
+            }
+
+        }
+
 
         [JsonProperty(PropertyName = "operation")]
         public string operation { get; set; }

@@ -74,18 +74,18 @@ namespace AzureFaultInjector
         
 
 
-        public bool processOp(string operation, string payload)
+        public bool processOp(ScheduledOperation curOp )
         {
-            switch(operation)
+            switch(curOp.operation)
             {
                 case "on":
-                    this.turnOn(payload);
+                    this.turnOn(curOp.payload);
                     return true;
                 case "off":
-                    this.turnOff(5, payload);
+                    this.turnOff(curOp.durationTicks, curOp.payload);
                     return true;
                 default:
-                    log.LogError($"Unknown op: {operation} for {this.ToString()}");
+                    log.LogError($"Unknown op: {curOp.ToString()} for {this.ToString()}");
                     break;
             }
             return false;

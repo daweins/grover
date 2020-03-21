@@ -30,7 +30,7 @@ namespace AzureFaultInjector
         {
             try
             {
-                log.LogInformation($"Fault Injector - VM function started at: {DateTime.Now}");
+                log.LogInformation($"Fault Injector function started at: {DateTime.Now}");
                 string subId = Environment.GetEnvironmentVariable("targetSubscription");
                 string rgListStr = Environment.GetEnvironmentVariable("targetRGList");
                 string clientId = Environment.GetEnvironmentVariable("clientId");
@@ -51,7 +51,7 @@ namespace AzureFaultInjector
                 Microsoft.Azure.Management.Fluent.IAzure myAz = Azure.Configure().Authenticate(myAzCreds).WithSubscription(subId);
 
 
-                // Centralize the filtering of target RGs for fault injection
+                // Centralize the filtering of target RGs for fault injection - could probably move this to only occur if we have a scheduled op
                 List<IResourceGroup> rgList = new List<IResourceGroup>(myAz.ResourceGroups.ListByTag(rgFilterTag, "true"));
                 log.LogInformation($"Finding ResourceGroups in subscription {subId} with Tag {rgFilterTag} with a value of true");
 
@@ -385,24 +385,24 @@ namespace AzureFaultInjector
                         {
                             case "vm":
                                 FIVM vmFuzzer = new FIVM(log, myAz, curOp.target);
-                                opResult = vmFuzzer.processOp(curOp.operation, curOp.payload);
+                                opResult = vmFuzzer.processOp(curOp);
 
                                 break;
                             case "nsg":
                                 FINSG nsgFuzzer = new FINSG(log, myAz, curOp.target);
-                                opResult = nsgFuzzer.processOp(curOp.operation, curOp.payload);
+                                opResult = nsgFuzzer.processOp(curOp);
                                 break;
                             case "web":
                                 FIWeb webFuzzer = new FIWeb(log, myAz, curOp.target);
-                                opResult = webFuzzer.processOp(curOp.operation, curOp.payload);
+                                opResult = webFuzzer.processOp(curOp);
                                 break;
                             case "sql":
                                 FISQL sqlFuzzer = new FISQL(log, myAz, curOp.target);
-                                opResult = sqlFuzzer.processOp(curOp.operation, curOp.payload);
+                                opResult = sqlFuzzer.processOp(curOp);
                                 break;
                             case "vmss":
                                 FIVMSS vmssFuzzer = new FIVMSS(log, myAz, curOp.target);
-                                opResult = vmssFuzzer.processOp(curOp.operation, curOp.payload);
+                                opResult = vmssFuzzer.processOp(curOp);
                                 break;
                             default:
                                 log.LogError("Got an op we don't know how to handle!");

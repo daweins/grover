@@ -21,6 +21,32 @@ namespace AzureFaultInjector
         public long endTicks { get; set; }
 
 
+        [JsonProperty(PropertyName = "startTimeReadOnly")]
+        public string startTimeReadOnly
+        {
+            get
+            {
+                return new DateTime(startTicks).ToString();
+            }
+            set
+            {
+            }
+
+        }
+
+        [JsonProperty(PropertyName = "endTimeReadOnly")]
+        public string endTimeReadOnly
+        {
+            get
+            {
+                return new DateTime(endTicks).ToString();
+            }
+            set
+            {
+            }
+
+        }
+
         [JsonProperty(PropertyName = "status")]
         public string status { get; set; }
 
