@@ -17,6 +17,9 @@ namespace AzureFaultInjector
         [JsonProperty(PropertyName = "testDefName")]
         public string testDefName { get; set; }
 
+        [JsonProperty(PropertyName = "numRepititions")]
+        public int numRepititions { get; set; }
+
         [JsonProperty(PropertyName = "actionList")]
         public List<TestDefinitionAction> actionList { get; set; }
 

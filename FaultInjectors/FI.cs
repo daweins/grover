@@ -37,8 +37,8 @@ namespace AzureFaultInjector
         protected Microsoft.Azure.Management.ResourceManager.Fluent.Core.IResource myResource = null;
 
 
-        abstract protected bool turnOn(string payload);
-        abstract protected bool turnOff(long durationTicks, string payload);
+        abstract protected bool turnOn(ScheduledOperation curOp);
+        abstract protected bool turnOff(ScheduledOperation curOp);
 
         // This should be overridden by most implementations. C# doesn't have abstract statics, or I'd use that. 
         static public List<ScheduledOperation> getSampleSchedule(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, ILogger log)
@@ -79,10 +79,10 @@ namespace AzureFaultInjector
             switch(curOp.operation)
             {
                 case "on":
-                    this.turnOn(curOp.payload);
+                    this.turnOn(curOp);
                     return true;
                 case "off":
-                    this.turnOff(curOp.durationTicks, curOp.payload);
+                    this.turnOff(curOp);
                     return true;
                 default:
                     log.LogError($"Unknown op: {curOp.ToString()} for {this.ToString()}");

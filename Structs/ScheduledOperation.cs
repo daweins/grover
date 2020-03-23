@@ -26,6 +26,10 @@ namespace AzureFaultInjector
         [JsonProperty(PropertyName = "operation")]
         public string operation { get; set; }
 
+        [JsonProperty(PropertyName = "source")]
+        public string source { get; set; }
+
+
         [JsonProperty(PropertyName = "targetType")]
         public string targetType { get; set; }
 
@@ -59,11 +63,12 @@ namespace AzureFaultInjector
         }
 
 
-        public ScheduledOperation(DateTime iScheduleTime, string iDescription, string iTargetType, string iOperation,  string iTarget, long iDurationTicks, string iPayload = "")
+        public ScheduledOperation(DateTime iScheduleTime, string iSource, string iDescription, string iTargetType, string iOperation,  string iTarget, long iDurationTicks, string iPayload = "")
         {
             scheduleTimeTicks = iScheduleTime.Ticks;
             targetType = iTargetType;
             operation = iOperation;
+            source = iSource;
             target = iTarget;
             description = iDescription;
             payload = iPayload;

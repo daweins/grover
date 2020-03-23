@@ -116,6 +116,8 @@ namespace AzureFaultInjector
 
         }
 
+
+        //TODO: this probably belongs elsewhere. Certainly needs some decomposing
         static private void processTestSchedule(TestSchedule curTestSchedule, Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, ILogger log)
         {
             // Get the test definition from Cosmos
@@ -144,85 +146,90 @@ namespace AzureFaultInjector
                         log.LogInformation($"Got Test Definition to parse: {curTestDef.ToString()}");
                         long startTicks = Math.Max(curTestSchedule.startTicks, DateTime.Now.Ticks); // Start either when scheduled, or now
                         long endTicks = startTicks;
-                        foreach (TestDefinitionAction curAction in curTestDef.actionList)
+                        for (int curRepitition = 0;  curRepitition < curTestDef.numRepititions; curRepitition++)
                         {
-                            startTicks = endTicks; // Move to the next timespan
-                            endTicks = startTicks + TimeSpan.FromMinutes(curAction.durationMinutes).Ticks;
-                            List<string> actionFIList = new List<string>();
-                            List<string> regionList = new List<string>();
-                            // Figure out the FI Type population
-                            foreach (TestDefinitionFIType targetFI in curAction.fiTypes)
+                            foreach (TestDefinitionAction curAction in curTestDef.actionList)
                             {
-                                string targetFIName = targetFI.fi;
-
-                                // TODO: A lot of this nasty reflection should be moved to FI.cs
-                                foreach (Type curFI in FI.getSubTypes())
+                                startTicks = endTicks; // Move to the next timespan
+                                endTicks = startTicks + TimeSpan.FromMinutes(curAction.durationMinutes).Ticks;
+                                
+                                List<string> actionFIList = new List<string>();
+                                List<string> regionList = new List<string>();
+                                // Figure out the FI Type population
+                                foreach (TestDefinitionFIType targetFI in curAction.fiTypes)
                                 {
-                                    string curTargetType = (string)curFI.GetField("myTargetType", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public).GetValue(null);
-                                    if (curTargetType != "Unknown")
+                                    string targetFIName = targetFI.fi;
+
+                                    // TODO: A lot of this nasty reflection should be moved to FI.cs
+                                    foreach (Type curFI in FI.getSubTypes())
                                     {
-                                        if (targetFIName == "*" || targetFIName == curTargetType)
+                                        string curTargetType = (string)curFI.GetField("myTargetType", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public).GetValue(null);
+                                        if (curTargetType != "Unknown")
                                         {
-                                            actionFIList.Add(curTargetType);
-                                        }
-                                    }
-                                }
-
-                            }
-
-                            // Handle region actions
-                            List<string> actionRegionList = new List<string>();
-                            if (curAction.regionFailureList != null && curAction.regionFailureList.Count > 0)
-                            {
-                                // Figure out the region population
-                                // Build the total region population
-                                HashSet<string> regionPopulation = new HashSet<string>();
-                                foreach (IResourceGroup curRG in rgList)
-                                {
-                                    regionPopulation.Add(curRG.RegionName);
-                                }
-                                foreach (TestDefinitionRegionFailureDefinition targetRegion in curAction.regionFailureList)
-                                {
-                                    if (targetRegion.region == "*")
-                                    {
-                                        // Add all regions
-                                        actionRegionList.AddRange(regionPopulation);
-                                    }
-                                    else if (targetRegion.region == "?")
-                                    {
-                                        // Pick a region at random
-                                        int curRegionIndexToTarget = rnd.Next(regionPopulation.Count);
-                                        actionRegionList.Add(regionPopulation.ElementAt<string>(curRegionIndexToTarget));
-                                    }
-                                    else
-                                    {
-                                        foreach (string checkRegion in regionPopulation)
-                                        {
-                                            if (checkRegion == targetRegion.region)
+                                            if (targetFIName == "*" || targetFIName == curTargetType)
                                             {
-                                                actionRegionList.Add(checkRegion);
+                                                actionFIList.Add(curTargetType);
                                             }
                                         }
                                     }
 
                                 }
-                            }
-                            // TODO: Figure out the AZ population 
 
-                            log.LogInformation($"Parsing Action {curAction.label} from test {curTestDef.testDefName} from Ticks {startTicks} ({new DateTime(startTicks).ToString()}) to {endTicks} ({new DateTime(endTicks).ToString()}). Found {actionRegionList.Count} regions and {actionFIList.Count} Fault Injector Types to target");
-                            // Now create schedules
-
-                            List<ScheduledOperation> opsToAdd = new List<ScheduledOperation>();
-                            foreach (string curFIName in actionFIList)
-                            {
-                                Type curFIType = FI.getFIType(curFIName);
-                                foreach (string curRegionToKill in actionRegionList)
+                                // Handle region actions
+                                List<string> actionRegionList = new List<string>();
+                                if (curAction.regionFailureList != null && curAction.regionFailureList.Count > 0)
                                 {
-                                    List<ScheduledOperation> newOps = (List<ScheduledOperation>)curFIType.GetMethod("killRegion").Invoke(null, new object[] { myAz, rgList, curRegionToKill,startTicks,endTicks, log });
-                                    opsToAdd.AddRange(newOps);
+                                    // Figure out the region population
+                                    // Build the total region population
+                                    HashSet<string> regionPopulation = new HashSet<string>();
+                                    foreach (IResourceGroup curRG in rgList)
+                                    {
+                                        regionPopulation.Add(curRG.RegionName);
+                                    }
+                                    foreach (TestDefinitionRegionFailureDefinition targetRegion in curAction.regionFailureList)
+                                    {
+                                        if (targetRegion.region == "*")
+                                        {
+                                            // Add all regions
+                                            actionRegionList.AddRange(regionPopulation);
+                                        }
+                                        else if (targetRegion.region == "?")
+                                        {
+                                            // Pick a region at random
+                                            int curRegionIndexToTarget = rnd.Next(regionPopulation.Count);
+                                            actionRegionList.Add(regionPopulation.ElementAt<string>(curRegionIndexToTarget));
+                                        }
+                                        else
+                                        {
+                                            foreach (string checkRegion in regionPopulation)
+                                            {
+                                                if (checkRegion == targetRegion.region)
+                                                {
+                                                    actionRegionList.Add(checkRegion);
+                                                }
+                                            }
+                                        }
+
+                                    }
                                 }
+                                // TODO: Figure out the AZ population 
+
+                                log.LogInformation($"Parsing Action {curAction.label} from test {curTestDef.testDefName} from Ticks {startTicks} ({new DateTime(startTicks).ToString()}) to {endTicks} ({new DateTime(endTicks).ToString()}). Found {actionRegionList.Count} regions and {actionFIList.Count} Fault Injector Types to target");
+                                // Now create schedules
+
+                                List<ScheduledOperation> opsToAdd = new List<ScheduledOperation>();
+                                foreach (string curFIName in actionFIList)
+                                {
+                                    Type curFIType = FI.getFIType(curFIName);
+                                    foreach (string curRegionToKill in actionRegionList)
+                                    {
+                                        string sourceName = $"Schedule: {curTestSchedule} | Definition: {curTestDef} | Iteration: {curRepitition}/{curTestDef.numRepititions} | Action: {curAction.label} | FI: {curFIName} | Region: {curRegionToKill}";
+                                        List<ScheduledOperation> newOps = (List<ScheduledOperation>)curFIType.GetMethod("killRegion").Invoke(null, new object[] { myAz, rgList, sourceName,curRegionToKill, startTicks, endTicks, log });
+                                        opsToAdd.AddRange(newOps);
+                                    }
+                                }
+                                ScheduledOperationHelper.addSchedule(opsToAdd, log);
                             }
-                            ScheduledOperationHelper.addSchedule(opsToAdd, log);
                         }
                     }
 

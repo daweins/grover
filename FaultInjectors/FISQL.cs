@@ -38,7 +38,7 @@ namespace AzureFaultInjector
             }
         }
 
-        protected override bool turnOn(string payload)
+        protected override bool turnOn(ScheduledOperation curOp)
         {
             Microsoft.Azure.Management.Sql.Fluent.ISqlServer curSQL = (Microsoft.Azure.Management.Sql.Fluent.ISqlServer)myResource;
 
@@ -51,7 +51,7 @@ namespace AzureFaultInjector
                 // Recreate the firewall rules
                 //TODO: do the AzureServices special case
 
-                SQLFirewallDefinition rulesToRecreate = SQLFirewallDefinition.deserialize(payload);
+                SQLFirewallDefinition rulesToRecreate = SQLFirewallDefinition.deserialize(curOp.payload);
                 foreach(SQLFirewallRule curRule in rulesToRecreate.ruleList)
                 {
                     string ruleName = curRule.name;
@@ -77,7 +77,7 @@ namespace AzureFaultInjector
             }
         }
 
-        protected override bool turnOff(long durationTicks, string iPayload = "")
+        protected override bool turnOff(ScheduledOperation curOp)
         {
             Microsoft.Azure.Management.Sql.Fluent.ISqlServer curSQL = (Microsoft.Azure.Management.Sql.Fluent.ISqlServer)myResource;
 
@@ -122,7 +122,7 @@ namespace AzureFaultInjector
 
                 log.LogInformation($"Turned off SQL: {curSQL.Id}. Creating the compensating On action");
                 string onPayload = rulesToPreserve.toJSON();
-                ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddTicks(durationTicks), $"Compensating On action for turning off a {myTargetType}", myTargetType, "on", curTarget, 0, onPayload);
+                ScheduledOperation onOp = new ScheduledOperation(DateTime.Now.AddTicks(curOp.durationTicks), curOp.source,  $"Compensating On action for turning off a {myTargetType}", myTargetType, "on", curTarget, 0, onPayload);
                 ScheduledOperationHelper.addSchedule(onOp, log);
                 myLogHelper.logEvent(myTargetType, curTarget, "off");
 
@@ -167,7 +167,7 @@ namespace AzureFaultInjector
         }
         */
 
-        static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, int azToKill, long startTicks, long endTicks, ILogger log)
+        static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string source, int azToKill, long startTicks, long endTicks, ILogger log)
         {
             List<ScheduledOperation> results = new List<ScheduledOperation>();
             log.LogInformation($"Sql AZKill for Zone {azToKill}: Nothing to do - SQL is zonally redundant");
@@ -177,7 +177,7 @@ namespace AzureFaultInjector
         }
 
 
-        static public List<ScheduledOperation> killRegion(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string regionToKill, long startTicks, long endTicks, ILogger log)
+        static public List<ScheduledOperation> killRegion(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string source, string regionToKill, long startTicks, long endTicks, ILogger log)
         {
             List<ScheduledOperation> results = new List<ScheduledOperation>();
             foreach (IResourceGroup curRG in rgList)
@@ -189,7 +189,7 @@ namespace AzureFaultInjector
                     if (curSQL.RegionName == regionToKill)
                     {
                         log.LogInformation($"RegionKill: Got a Region {regionToKill} match for {curSQL.Id} - scheduling for termination");
-                        ScheduledOperation newOffOp = new ScheduledOperation(new DateTime(startTicks), $"Killing Region {regionToKill} - {myTargetType} Off", myTargetType, "off",  curSQL.Id, endTicks - startTicks);
+                        ScheduledOperation newOffOp = new ScheduledOperation(new DateTime(startTicks), $"{source} Region Kill {regionToKill}",$"Killing Region {regionToKill} - {myTargetType} Off", myTargetType, "off",  curSQL.Id, endTicks - startTicks);
                         results.Add(newOffOp);
                     }
                 }
