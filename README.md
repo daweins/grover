@@ -21,6 +21,7 @@ We are looking for help in the following primary areas:
 |:------------------------|:-------:|:--------:|:--------:|:--------------:|:------------------:|:----|
 |AKS                      |         |          |          |                |                    | 
 |Azure Redis              |         |          |          |                |                    | 
+|Azure Service Bus        |         |          |          |                |                    | 
 |Azure SQL                |   Yes   |  Yes     |  N/A     |                |                    |Triggers Geo-failover of DBs configured for this, then removes all Firewall rules to simulate failure. Restoration replaces the Firewall rules  
 |CosmosDB                 |         |          |          |                |                    | Degradation - alter the RUs? 
 |Functions                |   Yes   |  Yes     |          |     Yes        |                    | same implementation as web 
