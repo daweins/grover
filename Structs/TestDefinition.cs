@@ -23,7 +23,7 @@ namespace AzureFaultInjector
         [JsonProperty(PropertyName = "actionList")]
         public List<TestDefinitionAction> actionList { get; set; }
 
-
+        
 
 
 
@@ -50,12 +50,20 @@ namespace AzureFaultInjector
         [JsonProperty(PropertyName = "durationMinutes")]
         public int durationMinutes { get; set; }
 
+
+        [JsonProperty(PropertyName = "maxFailures")]
+        public int maxFailures { get; set; }
+
         [JsonProperty(PropertyName = "fiTypes")]
         public List<TestDefinitionFIType> fiTypes { get; set; }
 
 
         [JsonProperty(PropertyName = "regionFailureList")]
         public List<TestDefinitionRegionFailureDefinition> regionFailureList;
+
+        [JsonProperty(PropertyName = "resourceNameList")]
+        public List<TestDefinitionResourceNameDefinition> resourceNameList;
+
 
     }
 
@@ -74,4 +82,10 @@ namespace AzureFaultInjector
 
     }
 
+    public class TestDefinitionResourceNameDefinition
+    {
+        [JsonProperty(PropertyName = "resourceShortName")]
+        public string resourceShortName { get; set; }
+
+    }
 }

@@ -228,6 +228,13 @@ namespace AzureFaultInjector
                                         opsToAdd.AddRange(newOps);
                                     }
                                 }
+
+                                if (opsToAdd.Count > curAction.maxFailures)
+                                {
+                                    // Need to trim opsToAdd
+                                    log.LogInformation($"Limiting to {curAction.maxFailures} failures");
+                                    opsToAdd = opsToAdd.OrderBy(x => rnd.Next()).Take< ScheduledOperation>(curAction.maxFailures).ToList< ScheduledOperation>();
+                                }
                                 ScheduledOperationHelper.addSchedule(opsToAdd, log);
                             }
                         }
