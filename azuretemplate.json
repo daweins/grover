@@ -1,9 +1,197 @@
 {
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
-    "parameters": {},
+    "parameters": {
+        "clientID": {
+            "type": "string"
+        },
+        "clientPassword": {
+            "type": "string"
+        }
+        
+
+    },
     "functions": [],
-    "variables": {},
-    "resources": [],
-    "outputs": {}
+    "variables": {
+            "storageAccountName" : "[concat('groverstor',uniquestring(resourceGroup().id))]",
+            "functionName" : "groverFaultInjector",
+            "serverFarmName" : "groverFIHost",
+            "logAnalyticsName" : "[concat('groverLog', uniquestring(resourceGRoup().id))]",
+            "repoURL": "https://github.com/daweins/grover",
+            "repoBranch":"master-faultinjector"
+
+            
+    },
+    "resources": [
+        {
+            "name": "[variables('storageAccountName')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2019-06-01",
+            "tags": {
+                "displayName": "[variables('storageAccountName')]"
+            },
+            "location": "[resourceGroup().location]",
+            "kind": "StorageV2",
+            "sku": {
+               "name": "Standard_LRS",
+               "tier": "Standard"
+             }
+        },
+        {
+            "name": "[variables('logAnalyticsName')]",
+            "type": "Microsoft.OperationalInsights/workspaces",
+            "apiVersion": "2015-11-01-preview",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "sku": {
+                    "name": "pergb2018"
+                },
+                 "retentionInDays": 120,
+                "features": {
+                    "searchVersion": 1
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Web/serverfarms",
+            "apiVersion": "2018-02-01",
+            "name": "[variables('serverFarmName')]",
+            "location": "[resourceGroup().location]",
+                        "sku": {
+                "name": "Y1",
+                "tier": "Dynamic",
+                "size": "Y1",
+                "family": "Y",
+                "capacity": 0
+            },
+            "kind": "functionapp",
+            "properties": {
+                "perSiteScaling": false,
+                "maximumElasticWorkerCount": 1,
+                "isSpot": false,
+                "reserved": false,
+                "isXenon": false,
+                "hyperV": false,
+                "targetWorkerCount": 0,
+                "targetWorkerSizeId": 0
+            }
+        
+
+        },
+         {
+              "name": "[variables('functionName')]",
+              "type": "Microsoft.Web/sites",
+              "apiVersion": "2018-11-01",
+              "location": "[resourceGroup().location]",
+              "kind": "functionapp",
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms', variables('serverFarmName'))]",
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+              ],
+              "properties": {
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('serverFarmName'))]",
+                "siteConfig": {
+                  "appSettings": [
+                    {
+                      "name": "AzureWebJobsDashboard",
+                      "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountName'),'2015-05-01-preview').key1)]"
+                    },
+                    {
+                      "name": "AzureWebJobsStorage",
+                      "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountName'),'2015-05-01-preview').key1)]"
+                    },
+                    {
+                      "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+                      "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountName'),'2015-05-01-preview').key1)]"
+                    },
+                    {
+                      "name": "WEBSITE_CONTENTSHARE",
+                      "value": "[toLower(variables('functionName'))]"
+                    },
+                    {
+                      "name": "FUNCTIONS_EXTENSION_VERSION",
+                      "value": "~2"
+                    },
+                    {
+                      "name": "FUNCTIONS_WORKER_RUNTIME",
+                      "value": "dotnet"
+                    },
+                    {
+                        "name" : "clientID",
+                        "value" : "[parameters('clientID')]"
+                    },
+                                        {
+                        "name" : "clientPassword",
+                        "value" : "[parameters('clientPassword')]"
+                    },
+                    {
+                        "name" : "targetSubscription",
+                        "value" : "[subscription().id]"
+                    },
+                    {
+                        "name": "tenantId",
+                        "value" : "[subscription().tenantId]"
+                    },
+                    {
+                        "name" : "LAWorkspaceID",
+                        "value" : "[reference(variables('logAnalyticsName')).customerId]"
+                    },
+                    {
+                        "name" : "LASharedKey",
+                        "value" : "[listKeys(variables('logAnalyticsName'), '2015-11-01-preview').primarySharedKey]"
+                    },
+                    {
+                        "name":"LATable",
+                        "value" : "GroverActions"
+                    },
+                    {
+                        "name" :"cosmosConn",
+                        "value" :"TBD"
+                    },
+                    {
+                        "name" :"cosmosDB",
+                        "value" :"grover"
+                    },
+                    {
+                        "name" :"cosmosContainerScheduledOperations",
+                        "value" :"scheduledOperations"
+                    },
+                    {
+                        "name" :"cosmosContainerMasterSchedule",
+                        "value" :"masterSchedule"
+                    },
+                    {
+                        "name" :"cosmosContainerTestDefinitions",
+                        "value" :"testDefinitions"
+                    },
+                    {
+                        "name" :"rgFilterTag",
+                        "value" :"allowFaultInjection"
+                    }
+                  ]
+                }
+              },
+              "resources":[
+                    {
+                    "apiVersion": "2015-08-01",
+                    "name": "web",
+                    "type": "sourcecontrols",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Web/sites/', variables('functionName'))]"
+                    ],
+                    "properties": {
+                        "RepoUrl": "[variables('repoURL')]",
+                        "branch": "[variables('repoBranch')]",
+                        "IsManualIntegration": true
+                    }
+                    }
+              ]
+         }
+    ],
+    "outputs": {
+        "la": {
+            "type" : "object",
+            "value": "[reference(variables('logAnalyticsName'))]"
+        }
+    }
 }
