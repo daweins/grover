@@ -101,12 +101,12 @@ namespace AzureFaultInjector
                     {
                         log.LogInformation($"Got Test Schedule to activate: {curTestSchedule.ToString()} ");
                         processTestSchedule(curTestSchedule, myAz, rgList, log);
-                       
+
                         // Update the schedule status to processing
                         // Can't upsert on status change as the status is the partition key, so delete + add
                         cosmosContainerTestSchedule.DeleteItemAsync<TestSchedule>(curTestSchedule.id, curTestSchedule.getPartitionKey());
                         curTestSchedule.status = "processed";
-                        ItemResponse<TestSchedule> updateSheduleResults =  cosmosContainerTestSchedule.UpsertItemAsync<TestSchedule>(curTestSchedule, curTestSchedule.getPartitionKey()).Result;
+                        ItemResponse<TestSchedule> updateSheduleResults = cosmosContainerTestSchedule.UpsertItemAsync<TestSchedule>(curTestSchedule, curTestSchedule.getPartitionKey()).Result;
                         log.LogInformation($"Marked schedule {curTestSchedule.id} as processed");
 
 
@@ -146,13 +146,13 @@ namespace AzureFaultInjector
                         log.LogInformation($"Got Test Definition to parse: {curTestDef.ToString()}");
                         long startTicks = Math.Max(curTestSchedule.startTicks, DateTime.Now.Ticks); // Start either when scheduled, or now
                         long endTicks = startTicks;
-                        for (int curRepitition = 0;  curRepitition < curTestDef.numRepititions; curRepitition++)
+                        for (int curRepitition = 0; curRepitition < curTestDef.numRepititions; curRepitition++)
                         {
                             foreach (TestDefinitionAction curAction in curTestDef.actionList)
                             {
                                 startTicks = endTicks; // Move to the next timespan
                                 endTicks = startTicks + TimeSpan.FromMinutes(curAction.durationMinutes).Ticks;
-                                
+
                                 List<string> actionFIList = new List<string>();
                                 List<string> regionList = new List<string>();
                                 // Figure out the FI Type population
@@ -224,7 +224,7 @@ namespace AzureFaultInjector
                                     foreach (string curRegionToKill in actionRegionList)
                                     {
                                         string sourceName = $"Schedule: {curTestSchedule} | Definition: {curTestDef} | Iteration: {curRepitition}/{curTestDef.numRepititions} | Action: {curAction.label} | FI: {curFIName} | Region: {curRegionToKill}";
-                                        List<ScheduledOperation> newOps = (List<ScheduledOperation>)curFIType.GetMethod("killRegion").Invoke(null, new object[] { myAz, rgList, sourceName,curRegionToKill, startTicks, endTicks, log });
+                                        List<ScheduledOperation> newOps = (List<ScheduledOperation>)curFIType.GetMethod("killRegion").Invoke(null, new object[] { myAz, rgList, sourceName, curRegionToKill, startTicks, endTicks, log });
                                         opsToAdd.AddRange(newOps);
                                     }
                                 }
@@ -233,7 +233,7 @@ namespace AzureFaultInjector
                                 {
                                     // Need to trim opsToAdd
                                     log.LogInformation($"Limiting to {curAction.maxFailures} failures");
-                                    opsToAdd = opsToAdd.OrderBy(x => rnd.Next()).Take< ScheduledOperation>(curAction.maxFailures).ToList< ScheduledOperation>();
+                                    opsToAdd = opsToAdd.OrderBy(x => rnd.Next()).Take<ScheduledOperation>(curAction.maxFailures).ToList<ScheduledOperation>();
                                 }
                                 ScheduledOperationHelper.addSchedule(opsToAdd, log);
                             }
@@ -256,11 +256,11 @@ namespace AzureFaultInjector
             {
                 Database curDB = cosmosClient.GetDatabase(cosmosDBName);
                 Container cosmosContainerScheduledOperations = curDB.GetContainer(cosmosContainerScheduledOperationsName);
-                
+
                 QueryDefinition query = new QueryDefinition(
                     @"SELECT *
                       FROM c
-                      WHERE c.durationTicks > 0 and c.scheduleTimeTicks < @curTicks").WithParameter("@curTicks",DateTime.Now.Ticks);
+                      WHERE c.durationTicks > 0 and c.scheduleTimeTicks < @curTicks").WithParameter("@curTicks", DateTime.Now.Ticks);
                 FeedIterator<ScheduledOperation> readyOps = cosmosContainerScheduledOperations.GetItemQueryIterator<ScheduledOperation>(query);
                 while (readyOps.HasMoreResults)
                 {
@@ -278,7 +278,7 @@ namespace AzureFaultInjector
             using (CosmosClient cosmosClient = new CosmosClient(cosmosConn))
             {
                 Database curDB = cosmosClient.GetDatabase(cosmosDBName);
-                Container cosmosContainerMasterScheduler= curDB.GetContainer(cosmosContainerMasterSchedulersName);
+                Container cosmosContainerMasterScheduler = curDB.GetContainer(cosmosContainerMasterSchedulersName);
 
                 QueryDefinition query = new QueryDefinition(
                     @"SELECT *
@@ -406,13 +406,13 @@ namespace AzureFaultInjector
             {
                 Database curDB = cosmosClient.GetDatabase(cosmosDBName);
                 Container cosmosContainerScheduledOperations = curDB.GetContainer(cosmosContainerScheduledOperationsName);
-                
+
                 QueryDefinition query = new QueryDefinition(
                     @"SELECT * 
                       FROM c
                       WHERE c.scheduleTimeTicks < @filterTime ")
                     .WithParameter("@filterTime", DateTime.UtcNow.Ticks);
-                FeedIterator<ScheduledOperation> readyOps =   cosmosContainerScheduledOperations.GetItemQueryIterator<ScheduledOperation>(query);
+                FeedIterator<ScheduledOperation> readyOps = cosmosContainerScheduledOperations.GetItemQueryIterator<ScheduledOperation>(query);
                 while (readyOps.HasMoreResults)
                 {
                     FeedResponse<ScheduledOperation> response = readyOps.ReadNextAsync().Result;
@@ -467,24 +467,6 @@ namespace AzureFaultInjector
 
             }
 
-
-            // process due ops
-
-
-
-
-            /*
-                foreach (string curRGName in rgListStr.Split(","))
-                {
-                    log.LogInformation($"Iterating over RG {curRGName}");
-                    FIVM vmFuzzer = new FIVM(log, myAz, curRGName, ingestConn, "annandale", "faultInjections");
-                    vmFuzzer.Fuzz(1);
-
-                    FINSG nsgFuzzer = new FINSG(log, myAz, curRGName, ingestConn, "annandale", "faultInjections");
-                    nsgFuzzer.Fuzz(25);
-                }
-                */
-
         }
-        }
+    }
 }
