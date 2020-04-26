@@ -39,6 +39,7 @@ namespace AzureFaultInjector
                 int vmFuzzPct = Convert.ToInt32(Environment.GetEnvironmentVariable("vmFuzzPct"));
                 int nsgFuzzPct = Convert.ToInt32(Environment.GetEnvironmentVariable("nsgFuzzPct"));
                 string rgFilterTag = Environment.GetEnvironmentVariable("rgFilterTag");
+                log.LogInformation($"Got Env variables: {DateTime.Now}");
 
 
                 ServicePrincipalLoginInformation spi = new ServicePrincipalLoginInformation
@@ -48,7 +49,10 @@ namespace AzureFaultInjector
 
                 };
                 AzureCredentials myAzCreds = new AzureCredentials(spi, tenantId, AzureEnvironment.AzureGlobalCloud);
+                log.LogInformation($"Created Creds");
+
                 Microsoft.Azure.Management.Fluent.IAzure myAz = Azure.Configure().Authenticate(myAzCreds).WithSubscription(subId);
+                log.LogInformation($"Got Az Management Object");
 
 
                 // Centralize the filtering of target RGs for fault injection - could probably move this to only occur if we have a scheduled op
