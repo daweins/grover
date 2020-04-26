@@ -140,7 +140,7 @@ namespace AzureFaultInjector
         }
         */
 
-        static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, int azToKill,string source,  long startTicks, long endTicks, ILogger log)
+        static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string regionToKill, int azToKill,string source,  long startTicks, long endTicks, ILogger log)
         {
             List<ScheduledOperation> results = new List<ScheduledOperation>();
             foreach (IResourceGroup curRG in rgList)
@@ -149,26 +149,28 @@ namespace AzureFaultInjector
                 List<IVirtualMachineScaleSet> VMSSList = new List<IVirtualMachineScaleSet>(myAz.VirtualMachineScaleSets.ListByResourceGroup(curRG.Name));
                 foreach (IVirtualMachineScaleSet curVMSS in VMSSList)
                 {
-                    // Iterate over each VM in the VMSS
-                    IEnumerable<IVirtualMachineScaleSetVM> vmList = curVMSS.VirtualMachines.List();
-
-                    foreach (IVirtualMachineScaleSetVM curVM in vmList)
+                    if (curVMSS.RegionName == regionToKill)
                     {
-                        // VMSS VM doesn't explicitly state which AZ it is in, have to break into its inner object. :( PG Feedback to be sent
-                        
-                        foreach (var curZone in curVM.Inner.Zones)
-                        {
-                            if (curZone == azToKill.ToString())  // Unlike a VM, the Zone here is a string - that's easier for us
-                            {
-                                log.LogInformation($"AZKill: Got a Zone {azToKill} match for {curVM.Id} - scheduling for termination");
+                        // Iterate over each VM in the VMSS
+                        IEnumerable<IVirtualMachineScaleSetVM> vmList = curVMSS.VirtualMachines.List();
 
-                                ScheduledOperation newOffOp = new ScheduledOperation(new DateTime(startTicks), $"{source} killAZ {azToKill}", $"Killing AZ {azToKill} - {myTargetType} VM Instance Off", myTargetType, "off", curVMSS.Id, endTicks - startTicks, curVM.InstanceId);
-                                results.Add(newOffOp);
+                        foreach (IVirtualMachineScaleSetVM curVM in vmList)
+                        {
+                            // VMSS VM doesn't explicitly state which AZ it is in, have to break into its inner object. :( PG Feedback to be sent
+
+                            foreach (var curZone in curVM.Inner.Zones)
+                            {
+                                if (curZone == azToKill.ToString())  // Unlike a VM, the Zone here is a string - that's easier for us
+                                {
+                                    log.LogInformation($"AZKill: Got a Zone {azToKill} match for {curVM.Id} - scheduling for termination");
+
+                                    ScheduledOperation newOffOp = new ScheduledOperation(new DateTime(startTicks), $"{source} killAZ {azToKill}", $"Killing AZ {azToKill} - {myTargetType} VM Instance Off", myTargetType, "off", curVMSS.Id, endTicks - startTicks, curVM.InstanceId);
+                                    results.Add(newOffOp);
+                                }
                             }
                         }
                     }
                 }
-
             }
             return results;
         }

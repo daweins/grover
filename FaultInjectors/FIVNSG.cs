@@ -140,7 +140,7 @@ namespace AzureFaultInjector
         }
         */
 
-        static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string source, int azToKill, ILogger log)
+        static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string source, string regionToKill, int azToKill, ILogger log)
         {
             // Network doesn't AZ - return nothing
             log.LogInformation($"{myTargetType}: Killing AZ - return nothing as {myTargetType} doesn't have AZ");

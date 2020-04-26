@@ -167,7 +167,7 @@ namespace AzureFaultInjector
         }
         */
 
-        static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string source, int azToKill, long startTicks, long endTicks, ILogger log)
+        static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string source, string regionToKill, int azToKill, long startTicks, long endTicks, ILogger log)
         {
             List<ScheduledOperation> results = new List<ScheduledOperation>();
             log.LogInformation($"Sql AZKill for Zone {azToKill}: Nothing to do - SQL is zonally redundant");

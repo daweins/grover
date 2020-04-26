@@ -307,6 +307,26 @@ namespace AzureFaultInjector
                                             }
                                         }
                                         break;
+                                    case "AZ":
+                                        // Limit # of AZs
+                                        int[] azList = new int[] { 1, 2, 3 };
+                                        List<int> azToKillList = new List<int>();
+                                        azToKillList.AddRange(azList);
+                                        azToKillList = azToKillList.OrderBy(x => rnd.Next()).Take<int>(curAction.numFailures).ToList();
+                                        foreach (string curFIName in actionFIList)
+                                        {
+                                            Type curFIType = FI.getFIType(curFIName);
+                                            foreach (string curRegionToKill in actionRegionList)
+                                            {
+                                                foreach (int curAZToKill in azToKillList)
+                                                {
+                                                    string sourceName = $"Schedule: {curTestSchedule} | Definition: {curTestDef} | Iteration: {curRepitition}/{curTestDef.numRepititions} | Action: {curAction.label} | FI: {curFIName} | Region: {curRegionToKill}";
+                                                    List<ScheduledOperation> newOps = (List<ScheduledOperation>)curFIType.GetMethod("killAZ").Invoke(null, new object[] { myAz, rgList, sourceName, curRegionToKill, curAZToKill, startTicks, endTicks, log });
+                                                    opsToAdd.AddRange(newOps);
+                                                }
+                                            }
+                                        }
+                                        break;
                                     default:
                                         log.LogInformation($"Unknown action type: {curAction.actionType} in {curAction.ToString()}");
                                         break;

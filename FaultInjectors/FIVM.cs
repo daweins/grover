@@ -112,24 +112,28 @@ namespace AzureFaultInjector
         }*/
 
 
-        static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string source, int azToKill, long startTicks, long endTicks, ILogger log)
+        static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string source, string regionToKill, int azToKill, long startTicks, long endTicks, ILogger log)
         {
             List<ScheduledOperation> results = new List<ScheduledOperation>();
             foreach(IResourceGroup curRG in rgList)
             {
                 log.LogInformation($"{myTargetType} AZKill for Zone {azToKill}: checking RG: {curRG.Name}");
                 List<IVirtualMachine> vmList = new List<IVirtualMachine>(myAz.VirtualMachines.ListByResourceGroup(curRG.Name));
-                foreach(IVirtualMachine curVM in vmList)
+                foreach (IVirtualMachine curVM in vmList)
                 {
-                    // This is interesting that a VM object can be in multiple AZs... let's just roll with it
-                    foreach(var curZone in curVM.AvailabilityZones)
+                    if (curVM.RegionName == regionToKill)
                     {
-                        if(curZone.Value.ToString() == azToKill.ToString())
+                        // This is interesting that a VM object can be in multiple AZs... let's just roll with it
+                        foreach (var curZone in curVM.AvailabilityZones)
                         {
-                            log.LogInformation($"AZKill: Got a Zone {azToKill} match for {curVM.Id} - scheduling for termination");
-                            
-                            ScheduledOperation newOffOp = new ScheduledOperation(new DateTime(startTicks), $"{source} killAZ {azToKill}", $"Killing AZ {azToKill} - {myTargetType} Off", myTargetType, "off", curVM.Id, endTicks - startTicks);
-                            results.Add(newOffOp);
+
+                            if (curZone.Value.ToString() == azToKill.ToString())
+                            {
+                                log.LogInformation($"AZKill: Got a Zone {azToKill} match for {curVM.Id} - scheduling for termination");
+
+                                ScheduledOperation newOffOp = new ScheduledOperation(new DateTime(startTicks), $"{source} killAZ {azToKill}", $"Killing AZ {azToKill} - {myTargetType} Off", myTargetType, "off", curVM.Id, endTicks - startTicks);
+                                results.Add(newOffOp);
+                            }
                         }
                     }
                 }
@@ -137,7 +141,35 @@ namespace AzureFaultInjector
             }
             return results;
         }
+        /*
+         * 
+         * TODO - need to use LINQ on resourcesName
+        static public List<ScheduledOperation> killSingle(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string resourceMask, long startTicks, long endTicks, ILogger log)
+        {
 
+            List<ScheduledOperation> results = new List<ScheduledOperation>();
+            foreach (IResourceGroup curRG in rgList)
+            {
+                log.LogInformation($"{myTargetType} Single Kill with name mask:  {resourceMask}: checking RG: {curRG.Name}");
+                List<IVirtualMachine> vmList = new List<IVirtualMachine>(myAz.VirtualMachines.ListByResourceGroup(curRG.Name));
+                foreach (IVirtualMachine curVM in vmList)
+                {
+                    if (curVM.RegionName == regionToKill)
+                    {
+                        log.LogInformation($"RegionKill: Got a Region {regionToKill} match for {curVM.Id} - scheduling for termination");
+                        ScheduledOperation newOffOp = new ScheduledOperation(new DateTime(startTicks), $"{source} Region Kill {regionToKill}", $"Killing Region {regionToKill} - {myTargetType} Off", myTargetType, "off", curVM.Id, endTicks - startTicks);
+                        results.Add(newOffOp);
+                    }
+                }
+
+            }
+
+
+            // Randomize + return a single result
+            return results;
+        }
+
+    */
 
         static public List<ScheduledOperation> killRegion(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string source, string regionToKill, long startTicks, long endTicks, ILogger log)
         {
