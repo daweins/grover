@@ -7,6 +7,8 @@ using Microsoft.Azure.Cosmos;
 
 namespace AzureFaultInjector
 {
+
+    
     public class TestDefinition
     {
         [JsonProperty(PropertyName = "id")]
@@ -44,10 +46,12 @@ namespace AzureFaultInjector
             TestDefinition sampleDefinition = new TestDefinition();
             sampleDefinition.id = Guid.NewGuid().ToString();
             sampleDefinition.testDefName = "sample";
-            sampleDefinition.numRepititions = 10;
+            sampleDefinition.numRepititions = 1;
             sampleDefinition.actionList = new List<TestDefinitionAction>();
-            sampleDefinition.actionList.Add(TestDefinitionAction.getSample());
-
+            for (int i = 0; i < 6; i++)
+            {
+                sampleDefinition.actionList.Add(TestDefinitionAction.getSample());
+            }
             return (sampleDefinition);
         }
 
@@ -59,12 +63,18 @@ namespace AzureFaultInjector
         public string label { get; set; }
 
 
+
+        // Known Types - Resource, Region, AZ, Service
+        static private string[] knownActionTypes = new string[] { "Resource", "Region", "AZ", "Service" };
+        [JsonProperty(PropertyName = "actionType")]
+        public string actionType { get; set; }
+
         [JsonProperty(PropertyName = "durationMinutes")]
         public int durationMinutes { get; set; }
 
 
-        [JsonProperty(PropertyName = "maxFailures")]
-        public int maxFailures { get; set; }
+        [JsonProperty(PropertyName = "numFailures")]
+        public int numFailures { get; set; }
 
         [JsonProperty(PropertyName = "fiTypes")]
         public List<TestDefinitionFIType> fiTypes { get; set; }
@@ -82,7 +92,12 @@ namespace AzureFaultInjector
             TestDefinitionAction sampleAction = new TestDefinitionAction();
             sampleAction.durationMinutes = 5;
             sampleAction.label = "sample";
-            sampleAction.maxFailures = 10;
+            sampleAction.numFailures = 1;
+
+            Random rnd = new Random();
+            int i = rnd.Next(knownActionTypes.Length);
+            sampleAction.actionType = knownActionTypes[i];
+
 
             sampleAction.fiTypes = new List<TestDefinitionFIType>();
             sampleAction.fiTypes.Add(TestDefinitionFIType.getSampleTestDefinitionFIType());

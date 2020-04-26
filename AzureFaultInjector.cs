@@ -288,23 +288,32 @@ namespace AzureFaultInjector
                                 // Now create schedules
 
                                 List<ScheduledOperation> opsToAdd = new List<ScheduledOperation>();
-                                foreach (string curFIName in actionFIList)
+
+                                switch (curAction.actionType)
                                 {
-                                    Type curFIType = FI.getFIType(curFIName);
-                                    foreach (string curRegionToKill in actionRegionList)
-                                    {
-                                        string sourceName = $"Schedule: {curTestSchedule} | Definition: {curTestDef} | Iteration: {curRepitition}/{curTestDef.numRepititions} | Action: {curAction.label} | FI: {curFIName} | Region: {curRegionToKill}";
-                                        List<ScheduledOperation> newOps = (List<ScheduledOperation>)curFIType.GetMethod("killRegion").Invoke(null, new object[] { myAz, rgList, sourceName, curRegionToKill, startTicks, endTicks, log });
-                                        opsToAdd.AddRange(newOps);
-                                    }
+                                    case "Region":
+                                        // Limit # of regions
+                                        log.LogInformation($"Limiting # of regions: {curAction.numFailures}");
+                                        actionRegionList = actionRegionList.OrderBy(x => rnd.Next()).Take<string>(curAction.numFailures).ToList();
+                                        
+                                        foreach (string curFIName in actionFIList)
+                                        {
+                                            Type curFIType = FI.getFIType(curFIName);
+                                            foreach (string curRegionToKill in actionRegionList)
+                                            {
+                                                string sourceName = $"Schedule: {curTestSchedule} | Definition: {curTestDef} | Iteration: {curRepitition}/{curTestDef.numRepititions} | Action: {curAction.label} | FI: {curFIName} | Region: {curRegionToKill}";
+                                                List<ScheduledOperation> newOps = (List<ScheduledOperation>)curFIType.GetMethod("killRegion").Invoke(null, new object[] { myAz, rgList, sourceName, curRegionToKill, startTicks, endTicks, log });
+                                                opsToAdd.AddRange(newOps);
+                                            }
+                                        }
+                                        break;
+                                    default:
+                                        log.LogInformation($"Unknown action type: {curAction.actionType} in {curAction.ToString()}");
+                                        break;
+
                                 }
 
-                                if (opsToAdd.Count > curAction.maxFailures)
-                                {
-                                    // Need to trim opsToAdd
-                                    log.LogInformation($"Limiting to {curAction.maxFailures} failures");
-                                    opsToAdd = opsToAdd.OrderBy(x => rnd.Next()).Take<ScheduledOperation>(curAction.maxFailures).ToList<ScheduledOperation>();
-                                }
+                                                             
                                 ScheduledOperationHelper.addSchedule(opsToAdd, log);
                             }
                         }
