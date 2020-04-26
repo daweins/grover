@@ -79,5 +79,15 @@ namespace AzureFaultInjector
 
         }
 
+        public static TestSchedule getSample()
+        {
+            TestSchedule sampleSchedule = new TestSchedule();
+            sampleSchedule.id = Guid.NewGuid().ToString();
+            sampleSchedule.startTicks = DateTime.Now.AddMinutes(1).Ticks;
+            sampleSchedule.endTicks = DateTime.Now.AddMinutes(60).Ticks;
+            sampleSchedule.status = "waiting";
+            sampleSchedule.testDef = "sample";
+            return (sampleSchedule);
+        }
     }
 }

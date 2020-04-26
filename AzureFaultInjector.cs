@@ -22,8 +22,8 @@ namespace AzureFaultInjector
     public static class AzureFaultInjector
     {
         static Random rnd = new Random();
-
-
+        static bool initialCheckComplete = false;
+        
 
         [FunctionName("AzureFaultInjector")]
         public static void Run([TimerTrigger("0 * * * * *")]TimerInfo myTimer, ILogger log)
@@ -36,8 +36,8 @@ namespace AzureFaultInjector
                 string clientId = Environment.GetEnvironmentVariable("clientId");
                 string tenantId = Environment.GetEnvironmentVariable("tenantId");
                 string clientPwd = Environment.GetEnvironmentVariable("clientPassword");
-                int vmFuzzPct = Convert.ToInt32(Environment.GetEnvironmentVariable("vmFuzzPct"));
-                int nsgFuzzPct = Convert.ToInt32(Environment.GetEnvironmentVariable("nsgFuzzPct"));
+                //int vmFuzzPct = Convert.ToInt32(Environment.GetEnvironmentVariable("vmFuzzPct"));
+                //int nsgFuzzPct = Convert.ToInt32(Environment.GetEnvironmentVariable("nsgFuzzPct"));
                 string rgFilterTag = Environment.GetEnvironmentVariable("rgFilterTag");
                 log.LogInformation($"Got Env variables: {DateTime.Now}");
 
@@ -59,6 +59,8 @@ namespace AzureFaultInjector
                 List<IResourceGroup> rgList = new List<IResourceGroup>(myAz.ResourceGroups.ListByTag(rgFilterTag, "true"));
                 log.LogInformation($"Finding ResourceGroups in subscription {subId} with Tag {rgFilterTag} with a value of true");
 
+
+                doEmptyDBCheck(myAz, log);
                 doQueuePruning(myAz, rgList, log);
                 doQueuePopulate(myAz, rgList, log);
                 doQueueProcess(myAz, log);
@@ -74,7 +76,70 @@ namespace AzureFaultInjector
             }
         }
 
-        static private void doQueuePopulate(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, ILogger log)
+        static private void doEmptyDBCheck(Microsoft.Azure.Management.Fluent.IAzure myAz, ILogger log)
+        {
+            if(initialCheckComplete)
+            {
+                // already done!
+                return;
+            }
+            string cosmosConn = Environment.GetEnvironmentVariable("cosmosConn");
+            string cosmosDBName = Environment.GetEnvironmentVariable("cosmosDB");
+            string cosmosContainerTestScheduleName = Environment.GetEnvironmentVariable("cosmosContainerMasterSchedule");
+            string cosmosContainerTestDefinitionName = Environment.GetEnvironmentVariable("cosmosContainerTestDefinitions");
+
+            // Check to see if there are no test definitions
+            using (CosmosClient cosmosClient = new CosmosClient(cosmosConn))
+            {
+                Database curDB = cosmosClient.GetDatabase(cosmosDBName);
+                Container cosmosContainerTestSchedule = curDB.GetContainer(cosmosContainerTestScheduleName);
+                QueryDefinition query = new QueryDefinition(
+                 @"SELECT  VALUE COUNT(1)
+                    FROM c ");
+                 
+                FeedIterator<Int32> numSchedules= cosmosContainerTestSchedule.GetItemQueryIterator<Int32>(query);
+                if(numSchedules.HasMoreResults)
+                {
+                    FeedResponse<Int32> numRecordsFeed = numSchedules.ReadNextAsync().Result;
+                    foreach(var numRecordResult in numRecordsFeed)
+                    {
+                        Int32 numRecords = numRecordResult;
+                        if(numRecords == 0)
+                        {
+                            log.LogInformation("No Test Schedules - populating an example");
+                            TestSchedule sampleSchedule = TestSchedule.getSample();
+                            ItemResponse<TestSchedule> sampleScheduleResponse =  cosmosContainerTestSchedule.UpsertItemAsync(sampleSchedule).Result;
+                            log.LogInformation($"Sample Schedule Created: {sampleScheduleResponse.ToString()}");
+                        }
+                    }
+                }
+
+                Container cosmosContainerTestDefinition = curDB.GetContainer(cosmosContainerTestDefinitionName);
+                FeedIterator<Int32> numDefinitions = cosmosContainerTestDefinition.GetItemQueryIterator<Int32>(query);
+                if (numDefinitions.HasMoreResults)
+                {
+                    FeedResponse<Int32> numRecordsFeed = numDefinitions.ReadNextAsync().Result;
+                    foreach (var numRecordResult in numRecordsFeed)
+                    {
+                        Int32 numRecords = numRecordResult;
+                        if (numRecords == 0)
+                        {
+                            log.LogInformation("No Test Definitions - populating an example");
+                            TestDefinition sampleDefinition = TestDefinition.getSample();
+                            ItemResponse<TestDefinition> sampleDefinitionResponse = cosmosContainerTestDefinition.UpsertItemAsync(sampleDefinition).Result;
+                            log.LogInformation($"Sample Definition Created: {sampleDefinitionResponse.ToString()}");
+                        }
+                    }
+                }
+
+            }
+
+            // Check to see if there are no test schedules
+            initialCheckComplete = true;
+
+
+        }
+            static private void doQueuePopulate(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, ILogger log)
         {
             //            doRandomQueuePopulate(myAz, rgList, log);
 
@@ -88,6 +153,7 @@ namespace AzureFaultInjector
             {
                 Database curDB = cosmosClient.GetDatabase(cosmosDBName);
                 Container cosmosContainerTestSchedule = curDB.GetContainer(cosmosContainerTestScheduleName);
+
 
                 QueryDefinition query = new QueryDefinition(
                     @"SELECT * 

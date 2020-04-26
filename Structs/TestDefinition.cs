@@ -39,6 +39,18 @@ namespace AzureFaultInjector
 
         }
 
+        public static TestDefinition getSample()
+        {
+            TestDefinition sampleDefinition = new TestDefinition();
+            sampleDefinition.id = Guid.NewGuid().ToString();
+            sampleDefinition.testDefName = "sample";
+            sampleDefinition.numRepititions = 10;
+            sampleDefinition.actionList = new List<TestDefinitionAction>();
+            sampleDefinition.actionList.Add(TestDefinitionAction.getSample());
+
+            return (sampleDefinition);
+        }
+
     }
 
     public class TestDefinitionAction
@@ -65,6 +77,26 @@ namespace AzureFaultInjector
         public List<TestDefinitionResourceNameDefinition> resourceNameList;
 
 
+        public static TestDefinitionAction getSample()
+        {
+            TestDefinitionAction sampleAction = new TestDefinitionAction();
+            sampleAction.durationMinutes = 5;
+            sampleAction.label = "sample";
+            sampleAction.maxFailures = 10;
+
+            sampleAction.fiTypes = new List<TestDefinitionFIType>();
+            sampleAction.fiTypes.Add(TestDefinitionFIType.getSampleTestDefinitionFIType());
+
+            sampleAction.regionFailureList = new List<TestDefinitionRegionFailureDefinition>();
+            sampleAction.regionFailureList.Add(TestDefinitionRegionFailureDefinition.getSampleTestDefinitionRegionFailure());
+
+            sampleAction.resourceNameList = new List<TestDefinitionResourceNameDefinition>();
+            sampleAction.resourceNameList.Add(TestDefinitionResourceNameDefinition.getSampleTestDefinitionResourceName());
+
+
+            return (sampleAction);
+        }
+
     }
 
     public class TestDefinitionFIType
@@ -72,6 +104,12 @@ namespace AzureFaultInjector
         [JsonProperty(PropertyName = "fi")]
         public string fi { get; set; }
 
+        static public TestDefinitionFIType getSampleTestDefinitionFIType()
+        {
+            TestDefinitionFIType sampleFIType = new TestDefinitionFIType();
+            sampleFIType.fi = "*";
+            return (sampleFIType);
+        }
     }
 
 
@@ -80,6 +118,13 @@ namespace AzureFaultInjector
         [JsonProperty(PropertyName = "region")]
         public string region { get; set; }
 
+        static public TestDefinitionRegionFailureDefinition getSampleTestDefinitionRegionFailure()
+        {
+            TestDefinitionRegionFailureDefinition sampleRegion = new TestDefinitionRegionFailureDefinition();
+            sampleRegion.region = "*";
+            return sampleRegion;
+        }
+
     }
 
     public class TestDefinitionResourceNameDefinition
@@ -87,5 +132,13 @@ namespace AzureFaultInjector
         [JsonProperty(PropertyName = "resourceShortName")]
         public string resourceShortName { get; set; }
 
+        public static TestDefinitionResourceNameDefinition getSampleTestDefinitionResourceName()
+        {
+            TestDefinitionResourceNameDefinition sampleResourceName = new TestDefinitionResourceNameDefinition();
+            sampleResourceName.resourceShortName = "*";
+            return (sampleResourceName);
+        }
     }
+
+  
 }
