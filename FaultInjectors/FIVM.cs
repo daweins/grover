@@ -12,6 +12,7 @@ using Microsoft.Azure.Management.Compute.Fluent;
 using Microsoft.Azure.Management.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent;
 using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 
 namespace AzureFaultInjector
 {
@@ -129,7 +130,7 @@ namespace AzureFaultInjector
 
                             if (curZone.Value.ToString() == azToKill.ToString())
                             {
-                                log.LogInformation($"AZKill: Got a Zone {azToKill} match for {curVM.Id} - scheduling for termination");
+                                log.LogInformation($"TargetType: {myTargetType}:AZKill: Got a Zone {azToKill} match for {curVM.Id} - scheduling for termination");
 
                                 ScheduledOperation newOffOp = new ScheduledOperation(new DateTime(startTicks), $"{source} killAZ {azToKill}", $"Killing AZ {azToKill} - {myTargetType} Off", myTargetType, "off", curVM.Id, endTicks - startTicks);
                                 results.Add(newOffOp);
@@ -182,8 +183,32 @@ namespace AzureFaultInjector
                 {
                     if (curVM.RegionName == regionToKill)
                     {
-                        log.LogInformation($"RegionKill: Got a Region {regionToKill} match for {curVM.Id} - scheduling for termination");
+                        log.LogInformation($"TargetType: {myTargetType}:RegionKill: Got a Region {regionToKill} match for {curVM.Id} - scheduling for termination");
                         ScheduledOperation newOffOp = new ScheduledOperation(new DateTime(startTicks), $"{source} Region Kill {regionToKill}", $"Killing Region {regionToKill} - {myTargetType} Off", myTargetType, "off", curVM.Id, endTicks - startTicks);
+                        results.Add(newOffOp);
+                    }
+                }
+
+            }
+            return results;
+        }
+
+        static public List<ScheduledOperation> killResource(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string source, string resourceToKill, long startTicks, long endTicks, ILogger log)
+        {
+            List<ScheduledOperation> results = new List<ScheduledOperation>();
+            foreach (IResourceGroup curRG in rgList)
+            {
+                log.LogInformation($"{myTargetType} Resource Kill:  {resourceToKill}: checking RG: {curRG.Name}");
+                List<IVirtualMachine> vmList = new List<IVirtualMachine>(myAz.VirtualMachines.ListByResourceGroup(curRG.Name));
+                foreach (IVirtualMachine curVM in vmList)
+                {
+                    Regex rx = new Regex(resourceToKill);
+
+                    if (rx.IsMatch(curVM.Name))
+
+                        {
+                        log.LogInformation($"TargetType: {myTargetType} Resource Kill : Got a Resource {resourceToKill} match for {curVM.Id} ({curVM.Name}) - scheduling for termination");
+                        ScheduledOperation newOffOp = new ScheduledOperation(new DateTime(startTicks), $"{source} Resource Kill {resourceToKill}", $"Killing Resource {resourceToKill} - {myTargetType} Off", myTargetType, "off", curVM.Id, endTicks - startTicks);
                         results.Add(newOffOp);
                     }
                 }

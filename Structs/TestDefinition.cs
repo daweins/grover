@@ -48,7 +48,7 @@ namespace AzureFaultInjector
             sampleDefinition.testDefName = "sample";
             sampleDefinition.numRepititions = 1;
             sampleDefinition.actionList = new List<TestDefinitionAction>();
-            for (int i = 0; i < 6; i++)
+            for (int i = 0; i < 10; i++)
             {
                 sampleDefinition.actionList.Add(TestDefinitionAction.getSample());
             }
@@ -65,7 +65,7 @@ namespace AzureFaultInjector
 
 
         // Known Types - Resource, Region, AZ, Service
-        static private string[] knownActionTypes = new string[] { "Resource", "Region", "AZ", "Service" };
+        static private string[] knownActionTypes = new string[] { "Resource", "Region", "AZ"};
         [JsonProperty(PropertyName = "actionType")]
         public string actionType { get; set; }
 
@@ -150,7 +150,7 @@ namespace AzureFaultInjector
         public static TestDefinitionResourceNameDefinition getSampleTestDefinitionResourceName()
         {
             TestDefinitionResourceNameDefinition sampleResourceName = new TestDefinitionResourceNameDefinition();
-            sampleResourceName.resourceShortName = "*";
+            sampleResourceName.resourceShortName = ".*rigbasic.*";
             return (sampleResourceName);
         }
     }

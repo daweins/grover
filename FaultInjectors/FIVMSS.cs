@@ -13,6 +13,7 @@ using Microsoft.Azure.Management.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent;
 using System.Threading.Tasks;
 using Microsoft.Azure.Management.Storage.Fluent;
+using System.Text.RegularExpressions;
 
 namespace AzureFaultInjector
 {
@@ -140,7 +141,7 @@ namespace AzureFaultInjector
         }
         */
 
-        static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string regionToKill, int azToKill,string source,  long startTicks, long endTicks, ILogger log)
+        static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string source, string regionToKill, int azToKill,  long startTicks, long endTicks, ILogger log)
         {
             List<ScheduledOperation> results = new List<ScheduledOperation>();
             foreach (IResourceGroup curRG in rgList)
@@ -162,7 +163,7 @@ namespace AzureFaultInjector
                             {
                                 if (curZone == azToKill.ToString())  // Unlike a VM, the Zone here is a string - that's easier for us
                                 {
-                                    log.LogInformation($"AZKill: Got a Zone {azToKill} match for {curVM.Id} - scheduling for termination");
+                                    log.LogInformation($"TargetType: {myTargetType}:AZKill: Got a Zone {azToKill} match for {curVM.Id} - scheduling for termination");
 
                                     ScheduledOperation newOffOp = new ScheduledOperation(new DateTime(startTicks), $"{source} killAZ {azToKill}", $"Killing AZ {azToKill} - {myTargetType} VM Instance Off", myTargetType, "off", curVMSS.Id, endTicks - startTicks, curVM.InstanceId);
                                     results.Add(newOffOp);
@@ -188,8 +189,32 @@ namespace AzureFaultInjector
                 {
                     if (curVMSS.RegionName == regionToKill)
                     {
-                        log.LogInformation($"RegionKill: Got a Region {regionToKill} match for {curVMSS.Id} - scheduling for termination");
+                        log.LogInformation($"TargetType: {myTargetType}:RegionKill: Got a Region {regionToKill} match for {curVMSS.Id} - scheduling for termination");
                         ScheduledOperation newOffOp = new ScheduledOperation(new DateTime(startTicks), $"{source} Region Kill {regionToKill}", $"Killing Region {regionToKill} - {myTargetType} Off", myTargetType, "off", curVMSS.Id, endTicks - startTicks);
+                        results.Add(newOffOp);
+                    }
+                }
+
+            }
+            return results;
+        }
+
+        static public List<ScheduledOperation> killResource(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string source, string resourceToKill, long startTicks, long endTicks, ILogger log)
+        {
+            List<ScheduledOperation> results = new List<ScheduledOperation>();
+            foreach (IResourceGroup curRG in rgList)
+            {
+                log.LogInformation($"{myTargetType} Resource Kill:  {resourceToKill}: checking RG: {curRG.Name}");
+                List<IVirtualMachineScaleSet> vmssList = new List<IVirtualMachineScaleSet>(myAz.VirtualMachineScaleSets.ListByResourceGroup(curRG.Name));
+                foreach (IVirtualMachineScaleSet curVMSS in vmssList)
+                {
+                    Regex rx = new Regex(resourceToKill);
+
+                    if (rx.IsMatch(curVMSS.Name))
+
+                    {
+                        log.LogInformation($"TargetType: {myTargetType}:Resource Kill : Got a Resource {resourceToKill} match for {curVMSS.Id} ({curVMSS.Name}) - scheduling for termination");
+                        ScheduledOperation newOffOp = new ScheduledOperation(new DateTime(startTicks), $"{source} Resource Kill {resourceToKill}", $"Killing Resource {resourceToKill} - {myTargetType} Off", myTargetType, "off", curVMSS.Id, endTicks - startTicks);
                         results.Add(newOffOp);
                     }
                 }

@@ -12,6 +12,7 @@ using Microsoft.Azure.Management.AppService.Fluent;
 using Microsoft.Azure.Management.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent;
 using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 
 namespace AzureFaultInjector
 {
@@ -116,7 +117,7 @@ namespace AzureFaultInjector
         {
 
             List<ScheduledOperation> results = new List<ScheduledOperation>();
-            log.LogInformation($"Web AZKill for Zone {azToKill}: Nothing to do - App Service is zonally redundant");
+            log.LogInformation($"TargetType: {myTargetType} AZKill for Zone {azToKill}: Nothing to do - App Service is zonally redundant");
             // TODO - should we flip it on & off quickly to simulate the potential time until the SLB notices the failed backend? can we flip it fast enough?
 
             return results;
@@ -128,14 +129,38 @@ namespace AzureFaultInjector
             List<ScheduledOperation> results = new List<ScheduledOperation>();
             foreach (IResourceGroup curRG in rgList)
             {
-                log.LogInformation($"Web Region Kill for region:  {regionToKill}: checking RG: {curRG.Name}");
+                log.LogInformation($"TargetType: {myTargetType} Region Kill for region:  {regionToKill}: checking RG: {curRG.Name}");
                 List<IWebApp> WebList = new List<IWebApp>(myAz.WebApps.ListByResourceGroup(curRG.Name));
                 foreach (IWebApp curWeb in WebList)
                 {
                     if (curWeb.RegionName == regionToKill)
                     {
-                        log.LogInformation($"RegionKill: Got a Region {regionToKill} match for {curWeb.Id} - scheduling for termination");
+                        log.LogInformation($"TargetType: {myTargetType}RegionKill: Got a Region {regionToKill} match for {curWeb.Id} - scheduling for termination");
                         ScheduledOperation newOffOp = new ScheduledOperation(new DateTime(startTicks), $"{source} Region Kill {regionToKill}", $"Killing Region {regionToKill} - {myTargetType} Off", myTargetType, "off", curWeb.Id, endTicks-startTicks);
+                        results.Add(newOffOp);
+                    }
+                }
+
+            }
+            return results;
+        }
+
+        static public List<ScheduledOperation> killResource(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string source, string resourceToKill, long startTicks, long endTicks, ILogger log)
+        {
+            List<ScheduledOperation> results = new List<ScheduledOperation>();
+            foreach (IResourceGroup curRG in rgList)
+            {
+                log.LogInformation($"TargetType: {myTargetType} Resource Kill:  {resourceToKill}: checking RG: {curRG.Name}");
+                List<IWebApp> webList = new List<IWebApp>(myAz.WebApps.ListByResourceGroup(curRG.Name));
+                foreach (IWebApp curWeb in webList)
+                {
+                    Regex rx = new Regex(resourceToKill);
+
+                    if (rx.IsMatch(curWeb.Name))
+
+                    {
+                        log.LogInformation($"TargetType: {myTargetType}:Resource Kill : Got a Resource {resourceToKill} match for {curWeb.Id} ({curWeb.Name}) - scheduling for termination");
+                        ScheduledOperation newOffOp = new ScheduledOperation(new DateTime(startTicks), $"{source} Resource Kill {resourceToKill}", $"Killing Resource {resourceToKill} - {myTargetType} Off", myTargetType, "off", curWeb.Id, endTicks - startTicks);
                         results.Add(newOffOp);
                     }
                 }

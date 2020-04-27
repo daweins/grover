@@ -168,5 +168,14 @@ namespace AzureFaultInjector
             }
             return results;
         }
+
+        static public List<ScheduledOperation> killResource(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string source, string resourceToKill, long startTicks, long endTicks, ILogger log)
+        {
+            List<ScheduledOperation> results = new List<ScheduledOperation>();
+      log.LogInformation($"TargetType: {myTargetType}:Resource Kill : not implemented");
+                  
+            return results;
+        }
+
     }
 }

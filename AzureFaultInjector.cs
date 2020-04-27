@@ -298,13 +298,22 @@ namespace AzureFaultInjector
                                         
                                         foreach (string curFIName in actionFIList)
                                         {
-                                            Type curFIType = FI.getFIType(curFIName);
-                                            foreach (string curRegionToKill in actionRegionList)
+                                            try
                                             {
-                                                string sourceName = $"Schedule: {curTestSchedule} | Definition: {curTestDef} | Iteration: {curRepitition}/{curTestDef.numRepititions} | Action: {curAction.label} | FI: {curFIName} | Region: {curRegionToKill}";
-                                                List<ScheduledOperation> newOps = (List<ScheduledOperation>)curFIType.GetMethod("killRegion").Invoke(null, new object[] { myAz, rgList, sourceName, curRegionToKill, startTicks, endTicks, log });
-                                                opsToAdd.AddRange(newOps);
+
+                                                Type curFIType = FI.getFIType(curFIName);
+                                                foreach (string curRegionToKill in actionRegionList)
+                                                {
+                                                    string sourceName = $"Schedule: {curTestSchedule} | Definition: {curTestDef} | Iteration: {curRepitition}/{curTestDef.numRepititions} | Action: {curAction.label} | FI: {curFIName} | Region: {curRegionToKill}| AZ: Not Zonal | ResourceName: Not Filtered ";
+                                                    List<ScheduledOperation> newOps = (List<ScheduledOperation>)curFIType.GetMethod("killRegion").Invoke(null, new object[] { myAz, rgList, sourceName, curRegionToKill, startTicks, endTicks, log });
+                                                    opsToAdd.AddRange(newOps);
+                                                }
                                             }
+                                            catch (Exception err)
+                                            {
+                                                log.LogError($"Error in executing action {curAction.label} for a region kill against type {curFIName}: {err.ToString()}");
+                                            }
+
                                         }
                                         break;
                                     case "AZ":
@@ -315,14 +324,45 @@ namespace AzureFaultInjector
                                         azToKillList = azToKillList.OrderBy(x => rnd.Next()).Take<int>(curAction.numFailures).ToList();
                                         foreach (string curFIName in actionFIList)
                                         {
-                                            Type curFIType = FI.getFIType(curFIName);
-                                            foreach (string curRegionToKill in actionRegionList)
+                                            try
                                             {
-                                                foreach (int curAZToKill in azToKillList)
+
+
+                                                Type curFIType = FI.getFIType(curFIName);
+                                                foreach (string curRegionToKill in actionRegionList)
                                                 {
-                                                    string sourceName = $"Schedule: {curTestSchedule} | Definition: {curTestDef} | Iteration: {curRepitition}/{curTestDef.numRepititions} | Action: {curAction.label} | FI: {curFIName} | Region: {curRegionToKill}";
-                                                    List<ScheduledOperation> newOps = (List<ScheduledOperation>)curFIType.GetMethod("killAZ").Invoke(null, new object[] { myAz, rgList, sourceName, curRegionToKill, curAZToKill, startTicks, endTicks, log });
+                                                    foreach (int curAZToKill in azToKillList)
+                                                    {
+                                                        string sourceName = $"Schedule: {curTestSchedule} | Definition: {curTestDef} | Iteration: {curRepitition}/{curTestDef.numRepititions} | Action: {curAction.label} | FI: {curFIName} | Region: {curRegionToKill}   AZ: {curAZToKill} | ResourceName: Not Filtered";
+                                                        List<ScheduledOperation> newOps = (List<ScheduledOperation>)curFIType.GetMethod("killAZ").Invoke(null, new object[] { myAz, rgList, sourceName, curRegionToKill, curAZToKill, startTicks, endTicks, log });
+                                                        opsToAdd.AddRange(newOps);
+                                                    }
+                                                }
+                                            }
+                                            catch (Exception err)
+                                            {
+                                                log.LogError($"Error in executing action {curAction.label} for an AZ kill against type {curFIName}: {err.ToString()}");
+                                            }
+
+                                        }
+                                        break;
+                                    case "Resource":
+                                        foreach (string curFIName in actionFIList)
+                                        {
+                                            Type curFIType = FI.getFIType(curFIName);
+                                            foreach (TestDefinitionResourceNameDefinition  curResourceNameDef in curAction.resourceNameList)
+                                            {
+                                                try
+                                                {
+                                                    string curResourceName = curResourceNameDef.resourceShortName;
+                                                    string sourceName = $"Schedule: {curTestSchedule} | Definition: {curTestDef} | Iteration: {curRepitition}/{curTestDef.numRepititions} | Action: {curAction.label} | FI: {curFIName} | Region: Not Regional | AZ: Not Zonal | ResourceName: {curResourceName})";
+                                                    List<ScheduledOperation> newOps = (List<ScheduledOperation>)curFIType.GetMethod("killResource").Invoke(null, new object[] { myAz, rgList, sourceName, curResourceName, startTicks, endTicks, log });
+
                                                     opsToAdd.AddRange(newOps);
+                                                }
+                                                catch(Exception err)
+                                                {
+                                                    log.LogError($"Error in executing action {curAction.label} for a resource kill against type {curFIName}: {err.ToString()}");
                                                 }
                                             }
                                         }

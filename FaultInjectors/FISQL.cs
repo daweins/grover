@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.Management.Sql.Fluent;
 using Microsoft.Azure.Management.Sql.Fluent.SqlFirewallRule;
 using Microsoft.Azure.Management.Sql.Fluent.SqlFirewallRuleOperations;
+using System.Text.RegularExpressions;
 
 
 //TODO: Desired improvements include: handling service endpoints
@@ -170,7 +171,7 @@ namespace AzureFaultInjector
         static public List<ScheduledOperation> killAZ(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string source, string regionToKill, int azToKill, long startTicks, long endTicks, ILogger log)
         {
             List<ScheduledOperation> results = new List<ScheduledOperation>();
-            log.LogInformation($"Sql AZKill for Zone {azToKill}: Nothing to do - SQL is zonally redundant");
+            log.LogInformation($"TargetType: {myTargetType}: AZKill for Zone {azToKill}: Nothing to do - SQL is zonally redundant");
             // TODO - should we flip it on & off quickly to simulate the potential time until the SLB notices the failed backend? can we flip it fast enough?
 
             return results;
@@ -182,14 +183,39 @@ namespace AzureFaultInjector
             List<ScheduledOperation> results = new List<ScheduledOperation>();
             foreach (IResourceGroup curRG in rgList)
             {
-                log.LogInformation($"SQL Region Kill for region:  {regionToKill}: checking RG: {curRG.Name}");
+                log.LogInformation($"TargetType: {myTargetType}: Region Kill for region:  {regionToKill}: checking RG: {curRG.Name}");
                 List<ISqlServer> SQLList = new List<ISqlServer>(myAz.SqlServers.ListByResourceGroup(curRG.Name));
                 foreach (ISqlServer curSQL in SQLList)
                 {
                     if (curSQL.RegionName == regionToKill)
                     {
-                        log.LogInformation($"RegionKill: Got a Region {regionToKill} match for {curSQL.Id} - scheduling for termination");
+                        log.LogInformation($"TargetType: {myTargetType}:RegionKill: Got a Region {regionToKill} match for {curSQL.Id} - scheduling for termination");
                         ScheduledOperation newOffOp = new ScheduledOperation(new DateTime(startTicks), $"{source} Region Kill {regionToKill}",$"Killing Region {regionToKill} - {myTargetType} Off", myTargetType, "off",  curSQL.Id, endTicks - startTicks);
+                        results.Add(newOffOp);
+                    }
+                }
+
+            }
+            return results;
+        }
+
+
+        static public List<ScheduledOperation> killResource(Microsoft.Azure.Management.Fluent.IAzure myAz, List<IResourceGroup> rgList, string source, string resourceToKill, long startTicks, long endTicks, ILogger log)
+        {
+            List<ScheduledOperation> results = new List<ScheduledOperation>();
+            foreach (IResourceGroup curRG in rgList)
+            {
+                log.LogInformation($"{myTargetType} Resource Kill:  {resourceToKill}: checking RG: {curRG.Name}");
+                List<ISqlServer> sqlList = new List<ISqlServer>(myAz.SqlServers.ListByResourceGroup(curRG.Name));
+                foreach (ISqlServer curSQL in sqlList)
+                {
+                    Regex rx = new Regex(resourceToKill);
+
+                    if (rx.IsMatch(curSQL.Name))
+
+                    {
+                        log.LogInformation($"TargetType: {myTargetType}: Resource Kill : Got a Resource {resourceToKill} match for {curSQL.Id} ({curSQL.Name}) - scheduling for termination");
+                        ScheduledOperation newOffOp = new ScheduledOperation(new DateTime(startTicks), $"{source} Resource Kill {resourceToKill}", $"Killing Resource {resourceToKill} - {myTargetType} Off", myTargetType, "off", curSQL.Id, endTicks - startTicks);
                         results.Add(newOffOp);
                     }
                 }
